@@ -1,0 +1,11 @@
+{
+  "name": "plate",
+  "private": true,
+  "description": "Plate — grid-style recipe sharing with YOLO moderation",
+  "scripts": {
+    "mobile": "npm --prefix apps/mobile start",
+    "mobile:web": "npm --prefix apps/mobile run web",
+    "admin": "npm --prefix apps/admin run dev",
+    "backend": "cd backend && uvicorn app.main:app --reload --port 8000"
+  }
+}

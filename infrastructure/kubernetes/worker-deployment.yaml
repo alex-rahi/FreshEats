@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: plate-worker
+  namespace: plate
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/plate-worker-irsa
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: plate-worker
+  namespace: plate
+  labels:
+    app: plate-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: plate-worker
+  template:
+    metadata:
+      labels:
+        app: plate-worker
+    spec:
+      serviceAccountName: plate-worker
+      containers:
+        - name: worker
+          image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/plate-worker:latest
+          command: ["python", "-m", "app.sqs_consumer"]
+          ports:
+            - containerPort: 8001
+          envFrom:
+            - configMapRef:
+                name: plate-config
+            - secretRef:
+                name: plate-secrets
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 3Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 30
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: plate-worker
+  namespace: plate
+spec:
+  selector:
+    app: plate-worker
+  ports:
+    - port: 8001
+      targetPort: 8001
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: plate-worker-hpa
+  namespace: plate
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: plate-worker
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65

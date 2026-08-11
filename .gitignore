@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.local
+
+# Build outputs
+dist/
+build/
+.next/
+*.egg-info/
+.expo/
+web-build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Docker
+docker-data/
+
+# AI models (large files)
+workers/models/*.pt
+workers/models/*.onnx
+
+# Uploads
+data/uploads/*
+!data/uploads/.gitkeep
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+override.tf
+infrastructure/kubernetes/secrets.yaml
+

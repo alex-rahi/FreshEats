@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f7f3ee;
+  --ink: #1a1714;
+  --muted: #6b635b;
+  --line: #e6ded4;
+  --accent: #c45c26;
+  --surface: #ffffff;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}

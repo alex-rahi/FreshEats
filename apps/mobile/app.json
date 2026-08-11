@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Plate",
+    "slug": "plate",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "plate",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#F7F3EE"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.plate.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F7F3EE",
+        "foregroundImage": "./assets/android-icon-foreground.png"
+      },
+      "package": "com.plate.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Plate needs access to your photos to share recipes.",
+          "cameraPermission": "Plate needs camera access to photograph dishes."
+        }
+      ]
+    ]
+  }
+}

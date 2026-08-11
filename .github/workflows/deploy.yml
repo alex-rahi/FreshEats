@@ -1,0 +1,109 @@
+name: Deploy Plate to AWS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  EKS_CLUSTER: plate
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure/terraform/environments/prod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.0
+      - name: Terraform Init
+        run: terraform init
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve tfplan
+      - name: Export outputs
+        id: out
+        run: |
+          echo "ecr_api=$(terraform output -json ecr_urls | jq -r '.api')" >> $GITHUB_OUTPUT
+          echo "ecr_worker=$(terraform output -json ecr_urls | jq -r '.worker')" >> $GITHUB_OUTPUT
+          echo "ecr_admin=$(terraform output -json ecr_urls | jq -r '.admin')" >> $GITHUB_OUTPUT
+          echo "cluster=$(terraform output -raw cluster_name)" >> $GITHUB_OUTPUT
+    outputs:
+      ecr_api: ${{ steps.out.outputs.ecr_api }}
+      ecr_worker: ${{ steps.out.outputs.ecr_worker }}
+      ecr_admin: ${{ steps.out.outputs.ecr_admin }}
+      cluster: ${{ steps.out.outputs.cluster }}
+
+  build-push:
+    needs: terraform
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: api
+            context: backend
+            ecr_key: ecr_api
+          - name: worker
+            context: workers
+            ecr_key: ecr_worker
+          - name: admin
+            context: apps/admin
+            ecr_key: ecr_admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: login
+      - name: Build and push
+        env:
+          IMAGE: ${{ needs.terraform.outputs[matrix.ecr_key] }}
+        run: |
+          docker build -t "$IMAGE:${{ github.sha }}" -t "$IMAGE:latest" ${{ matrix.context }}
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:latest"
+
+  deploy:
+    needs: [terraform, build-push]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Configure kubeconfig
+        run: aws eks update-kubeconfig --name ${{ needs.terraform.outputs.cluster }} --region ${{ env.AWS_REGION }}
+      - name: Apply manifests
+        run: |
+          kubectl apply -f infrastructure/kubernetes/namespace.yaml
+          kubectl apply -f infrastructure/kubernetes/configmap.yaml
+          # secrets.yaml must already exist in-cluster (created from secrets.example.yaml)
+          kubectl apply -f infrastructure/kubernetes/api-deployment.yaml
+          kubectl apply -f infrastructure/kubernetes/worker-deployment.yaml
+          kubectl apply -f infrastructure/kubernetes/admin-deployment.yaml
+          kubectl apply -f infrastructure/kubernetes/ingress.yaml
+      - name: Rollout
+        run: |
+          kubectl -n plate set image deploy/plate-api api=${{ needs.terraform.outputs.ecr_api }}:${{ github.sha }}
+          kubectl -n plate set image deploy/plate-worker worker=${{ needs.terraform.outputs.ecr_worker }}:${{ github.sha }}
+          kubectl -n plate set image deploy/plate-admin admin=${{ needs.terraform.outputs.ecr_admin }}:${{ github.sha }}
+          kubectl -n plate rollout status deploy/plate-api
+          kubectl -n plate rollout status deploy/plate-worker
+          kubectl -n plate rollout status deploy/plate-admin

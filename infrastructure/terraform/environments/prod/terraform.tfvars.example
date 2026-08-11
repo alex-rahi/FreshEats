@@ -1,0 +1,15 @@
+aws_region  = "us-east-1"
+environment = "prod"
+name        = "plate"
+
+# Monthly budget (USD)
+budget_limit_usd = 100
+budget_alert_emails = [
+  # "you@example.com"
+]
+
+# Phase 1: alert @ 50%, shutoff @ 80%
+# Phase 2: + scale-down @ 70%
+# alert_threshold   = 50
+# scale_threshold   = 70
+# shutoff_threshold = 80
