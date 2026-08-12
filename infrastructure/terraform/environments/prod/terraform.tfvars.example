@@ -13,3 +13,6 @@ budget_alert_emails = [
 # alert_threshold   = 50
 # scale_threshold   = 70
 # shutoff_threshold = 80
+
+# Test shutoff safely first (plan-only Lambda; no mutations)
+# cost_guardrails_dry_run = true

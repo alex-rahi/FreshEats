@@ -55,6 +55,59 @@ budget_alert_emails = ["you@example.com"]
 - Confirm the SNS email subscription after `terraform apply`.
 - Optional: attach `deny_spend_policy_arn` to IAM users/roles to block new EC2/EKS/RDS creates after a breach.
 
+## Test shutoff (dry-run first)
+
+The cutoff Lambda supports plan-only mode via `DRY_RUN=true` (Terraform: `cost_guardrails_dry_run = true`). It still parses the budget threshold and returns the actions it *would* take, prefixed with `dry_run:`, without mutating EKS / RDS / Redis.
+
+### 1. Enable dry-run
+
+```hcl
+# infrastructure/terraform/environments/prod/terraform.tfvars
+cost_guardrails_dry_run = true
+```
+
+```bash
+cd infrastructure/terraform/environments/prod
+terraform apply -target=module.cost_guardrails
+```
+
+Or flip the env var on an already-deployed function:
+
+```bash
+aws lambda update-function-configuration \
+  --function-name fresheats-cost-cutoff \
+  --environment "Variables={EKS_CLUSTER_NAME=fresheats,RDS_INSTANCE_ID=...,REDIS_CLUSTER_ID=...,AWS_REGION=us-east-1,ALERT_THRESHOLD=50,SCALE_THRESHOLD=70,SHUTOFF_THRESHOLD=80,DRY_RUN=true}"
+```
+
+### 2. Invoke with a fake 80% Budgets payload
+
+```bash
+cat > /tmp/shutoff-event.json <<'EOF'
+{
+  "Records": [{
+    "Sns": {
+      "Subject": "AWS Budgets Notification",
+      "Message": "{\"threshold\": 80, \"notificationType\": \"ACTUAL\"}"
+    }
+  }]
+}
+EOF
+
+aws lambda invoke \
+  --function-name fresheats-cost-cutoff \
+  --cli-binary-format raw-in-base64-out \
+  --payload file:///tmp/shutoff-event.json \
+  /tmp/shutoff-out.json && cat /tmp/shutoff-out.json
+```
+
+Expect `"phase":"shutoff"`, `"dry_run":true`, and actions like `dry_run:eks:...->desired=0`.
+
+Use `"threshold": 70` / `50` to exercise scale vs alert without mutations either.
+
+### 3. Turn dry-run off for real shutoff
+
+Set `cost_guardrails_dry_run = false`, apply, then re-invoke the same payload (or wait for a real budget breach). Live mode **will** scale EKS to 0, delete Redis, and stop/tag RDS.
+
 ## Apply infrastructure
 
 ```bash

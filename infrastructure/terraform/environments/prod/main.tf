@@ -77,6 +77,12 @@ variable "shutoff_threshold" {
   default = 80
 }
 
+variable "cost_guardrails_dry_run" {
+  type        = bool
+  default     = false
+  description = "Plan-only cost cutoff Lambda (no EKS/RDS/Redis mutations)"
+}
+
 data "aws_availability_zones" "available" {
   state = "available"
 }
@@ -160,6 +166,7 @@ module "cost_guardrails" {
   alert_threshold   = var.alert_threshold
   scale_threshold   = var.scale_threshold
   shutoff_threshold = var.shutoff_threshold
+  dry_run           = var.cost_guardrails_dry_run
 }
 
 output "cluster_name" { value = module.eks.cluster_name }
@@ -179,6 +186,7 @@ output "budget_limit_usd" { value = module.cost_guardrails.budget_limit_usd }
 output "budget_sns_topic_arn" { value = module.cost_guardrails.sns_topic_arn }
 output "cost_cutoff_lambda_arn" { value = module.cost_guardrails.cutoff_lambda_arn }
 output "deny_spend_policy_arn" { value = module.cost_guardrails.deny_spend_policy_arn }
+output "cost_guardrails_dry_run" { value = module.cost_guardrails.dry_run }
 output "database_url" {
   value     = module.rds.database_url
   sensitive = true

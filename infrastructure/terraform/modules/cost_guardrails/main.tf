@@ -49,6 +49,12 @@ variable "shutoff_threshold" {
   description = "Phase 1/2: full compute shutoff"
 }
 
+variable "dry_run" {
+  type        = bool
+  default     = false
+  description = "When true, cutoff Lambda logs planned scale/shutoff actions without mutating AWS"
+}
+
 data "aws_caller_identity" "current" {}
 
 resource "aws_sns_topic" "budget" {
@@ -143,13 +149,14 @@ resource "aws_lambda_function" "cutoff" {
 
   environment {
     variables = {
-      EKS_CLUSTER_NAME   = var.eks_cluster_name
-      RDS_INSTANCE_ID    = var.rds_instance_id
-      REDIS_CLUSTER_ID   = var.redis_cluster_id
-      AWS_REGION         = var.aws_region
-      ALERT_THRESHOLD    = tostring(var.alert_threshold)
-      SCALE_THRESHOLD    = tostring(var.scale_threshold)
-      SHUTOFF_THRESHOLD  = tostring(var.shutoff_threshold)
+      EKS_CLUSTER_NAME  = var.eks_cluster_name
+      RDS_INSTANCE_ID   = var.rds_instance_id
+      REDIS_CLUSTER_ID  = var.redis_cluster_id
+      AWS_REGION        = var.aws_region
+      ALERT_THRESHOLD   = tostring(var.alert_threshold)
+      SCALE_THRESHOLD   = tostring(var.scale_threshold)
+      SHUTOFF_THRESHOLD = tostring(var.shutoff_threshold)
+      DRY_RUN           = var.dry_run ? "true" : "false"
     }
   }
 }
@@ -265,3 +272,4 @@ output "budget_limit_usd" { value = var.budget_limit_usd }
 output "alert_threshold" { value = var.alert_threshold }
 output "scale_threshold" { value = var.scale_threshold }
 output "shutoff_threshold" { value = var.shutoff_threshold }
+output "dry_run" { value = var.dry_run }

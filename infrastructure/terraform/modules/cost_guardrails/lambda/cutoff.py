@@ -7,6 +7,9 @@ Budget notifications (of $budget_limit, default $100):
 
 Phase 1: alert @ 50%, shutoff @ 80%
 Phase 2: adds 70% progressive scale-down before hard cutoff
+
+Set DRY_RUN=true to exercise threshold routing and planned actions
+without calling mutating AWS APIs.
 """
 
 from __future__ import annotations
@@ -16,8 +19,6 @@ import logging
 import os
 import re
 
-import boto3
-
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -25,11 +26,18 @@ EKS_CLUSTER = os.environ["EKS_CLUSTER_NAME"]
 RDS_INSTANCE_ID = os.environ.get("RDS_INSTANCE_ID", "")
 REDIS_CLUSTER_ID = os.environ.get("REDIS_CLUSTER_ID", "")
 AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
+DRY_RUN = os.environ.get("DRY_RUN", "false").lower() in {"1", "true", "yes", "on"}
 
 # Phase thresholds (% of monthly budget)
 ALERT_THRESHOLD = float(os.environ.get("ALERT_THRESHOLD", "50"))
 SCALE_THRESHOLD = float(os.environ.get("SCALE_THRESHOLD", "70"))
 SHUTOFF_THRESHOLD = float(os.environ.get("SHUTOFF_THRESHOLD", "80"))
+
+
+def _boto3():
+    import boto3
+
+    return boto3
 
 
 def _extract_threshold(event: dict) -> float | None:
@@ -74,6 +82,11 @@ def _scale_eks(eks, cluster: str, desired: int, minimum: int, maximum: int) -> l
     paginator = eks.get_paginator("list_nodegroups")
     for page in paginator.paginate(clusterName=cluster):
         for ng in page.get("nodegroups", []):
+            plan = f"eks:{cluster}/{ng}->desired={desired}"
+            if DRY_RUN:
+                logger.info("[DRY_RUN] would scale node group %s", plan)
+                actions.append(f"dry_run:{plan}")
+                continue
             logger.info(
                 "Scaling node group %s → desired=%s min=%s max=%s",
                 ng,
@@ -90,13 +103,22 @@ def _scale_eks(eks, cluster: str, desired: int, minimum: int, maximum: int) -> l
                     "desiredSize": desired,
                 },
             )
-            actions.append(f"eks:{cluster}/{ng}->desired={desired}")
+            actions.append(plan)
     return actions
+
+
+def _plan_scale_eks_no_api(cluster: str, desired: int) -> list[str]:
+    """Dry-run fallback when even list APIs should be skipped."""
+    return [f"dry_run:eks:{cluster}/*->desired={desired}"]
 
 
 def _stop_rds(rds, instance_id: str) -> list[str]:
     if not instance_id:
         return []
+    if DRY_RUN:
+        plan = f"rds:{instance_id}:stop_or_tag"
+        logger.info("[DRY_RUN] would stop/tag RDS %s", instance_id)
+        return [f"dry_run:{plan}"]
     try:
         desc = rds.describe_db_instances(DBInstanceIdentifier=instance_id)
         db = desc["DBInstances"][0]
@@ -125,6 +147,10 @@ def _stop_rds(rds, instance_id: str) -> list[str]:
 def _delete_redis(elasticache, cluster_id: str) -> list[str]:
     if not cluster_id:
         return []
+    if DRY_RUN:
+        plan = f"redis:{cluster_id}:deleting"
+        logger.info("[DRY_RUN] would delete Redis %s", cluster_id)
+        return [f"dry_run:{plan}"]
     try:
         elasticache.delete_cache_cluster(CacheClusterId=cluster_id)
         return [f"redis:{cluster_id}:deleting"]
@@ -145,32 +171,66 @@ def _phase_for_threshold(threshold: float) -> str:
 
 def handler(event, context):
     logger.info("Budget event received: %s", json.dumps(event))
+    logger.info("DRY_RUN=%s", DRY_RUN)
     threshold = _extract_threshold(event)
     if threshold is None:
         logger.warning("Could not parse budget threshold — treating as alert-only")
-        return {"ok": True, "phase": "alert", "threshold": None, "actions": []}
+        return {"ok": True, "phase": "alert", "threshold": None, "actions": [], "dry_run": DRY_RUN}
 
     phase = _phase_for_threshold(threshold)
     logger.info("Threshold=%.1f%% → phase=%s", threshold, phase)
 
     if phase == "alert" or phase == "none":
-        return {"ok": True, "phase": phase, "threshold": threshold, "actions": [], "skipped": "alert_only"}
+        return {
+            "ok": True,
+            "phase": phase,
+            "threshold": threshold,
+            "actions": [],
+            "skipped": "alert_only",
+            "dry_run": DRY_RUN,
+        }
 
-    eks = boto3.client("eks", region_name=AWS_REGION)
     actions: list[str] = []
 
     if phase == "scale":
-        # Phase 2: shrink cluster but keep a minimal footprint
-        actions.extend(_scale_eks(eks, EKS_CLUSTER, desired=1, minimum=1, maximum=2))
-        return {"ok": True, "phase": "scale", "threshold": threshold, "actions": actions}
+        if DRY_RUN:
+            # Prefer planning without mutating; still try list if credentials allow.
+            try:
+                eks = _boto3().client("eks", region_name=AWS_REGION)
+                actions.extend(_scale_eks(eks, EKS_CLUSTER, desired=1, minimum=1, maximum=2))
+            except Exception as exc:
+                logger.warning("[DRY_RUN] EKS list failed (%s); using generic plan", exc)
+                actions.extend(_plan_scale_eks_no_api(EKS_CLUSTER, desired=1))
+        else:
+            eks = _boto3().client("eks", region_name=AWS_REGION)
+            actions.extend(_scale_eks(eks, EKS_CLUSTER, desired=1, minimum=1, maximum=2))
+        return {"ok": True, "phase": "scale", "threshold": threshold, "actions": actions, "dry_run": DRY_RUN}
 
     # Phase 1/2 shutoff at 80%
-    rds = boto3.client("rds", region_name=AWS_REGION)
-    elasticache = boto3.client("elasticache", region_name=AWS_REGION)
-    actions.extend(_scale_eks(eks, EKS_CLUSTER, desired=0, minimum=0, maximum=1))
-    actions.extend(_stop_rds(rds, RDS_INSTANCE_ID))
-    actions.extend(_delete_redis(elasticache, REDIS_CLUSTER_ID))
+    if DRY_RUN:
+        try:
+            eks = _boto3().client("eks", region_name=AWS_REGION)
+            actions.extend(_scale_eks(eks, EKS_CLUSTER, desired=0, minimum=0, maximum=1))
+        except Exception as exc:
+            logger.warning("[DRY_RUN] EKS list failed (%s); using generic plan", exc)
+            actions.extend(_plan_scale_eks_no_api(EKS_CLUSTER, desired=0))
+        actions.extend(_stop_rds(None, RDS_INSTANCE_ID))
+        actions.extend(_delete_redis(None, REDIS_CLUSTER_ID))
+    else:
+        boto3 = _boto3()
+        eks = boto3.client("eks", region_name=AWS_REGION)
+        rds = boto3.client("rds", region_name=AWS_REGION)
+        elasticache = boto3.client("elasticache", region_name=AWS_REGION)
+        actions.extend(_scale_eks(eks, EKS_CLUSTER, desired=0, minimum=0, maximum=1))
+        actions.extend(_stop_rds(rds, RDS_INSTANCE_ID))
+        actions.extend(_delete_redis(elasticache, REDIS_CLUSTER_ID))
 
-    result = {"ok": True, "phase": "shutoff", "threshold": threshold, "actions": actions}
-    logger.info("Shutoff complete: %s", result)
+    result = {
+        "ok": True,
+        "phase": "shutoff",
+        "threshold": threshold,
+        "actions": actions,
+        "dry_run": DRY_RUN,
+    }
+    logger.info("Shutoff %s: %s", "planned" if DRY_RUN else "complete", result)
     return result
