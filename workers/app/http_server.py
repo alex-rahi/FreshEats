@@ -12,7 +12,7 @@ from app.pipeline.analyze import analyze_bytes, analyze_path
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("plate-worker-http")
 
-app = FastAPI(title="Plate YOLO Worker", version="1.0.0")
+app = FastAPI(title="RecipeBoard YOLO Worker", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,7 +26,7 @@ async def health():
     model_exists = os.path.isfile(settings.yolo_model_path)
     return {
         "status": "ok",
-        "service": "plate-yolo-worker",
+        "service": "recipeboard-yolo-worker",
         "model_path": settings.yolo_model_path,
         "model_ready": model_exists,
     }

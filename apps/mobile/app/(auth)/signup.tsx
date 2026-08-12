@@ -45,7 +45,7 @@ export default function SignUpScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Text style={styles.title}>Create your profile</Text>
-      <Text style={styles.sub}>Join Plate and start sharing dishes.</Text>
+      <Text style={styles.sub}>Join RecipeBoard and start sharing dishes.</Text>
 
       <Text style={styles.label}>Username</Text>
       <TextInput

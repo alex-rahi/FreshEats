@@ -3,8 +3,8 @@ import { Sidebar } from '../components/Sidebar';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Plate Moderation',
-  description: 'Manual review dashboard for Plate recipe images',
+  title: 'RecipeBoard Moderation',
+  description: 'Manual review dashboard for RecipeBoard recipe images',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

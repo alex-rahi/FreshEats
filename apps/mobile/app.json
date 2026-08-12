@@ -1,25 +1,25 @@
 {
   "expo": {
-    "name": "Plate",
-    "slug": "plate",
+    "name": "RecipeBoard",
+    "slug": "recipeboard",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "plate",
+    "scheme": "recipeboard",
     "userInterfaceStyle": "light",
     "splash": {
       "backgroundColor": "#F7F3EE"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.plate.app"
+      "bundleIdentifier": "com.recipeboard.app"
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#F7F3EE",
         "foregroundImage": "./assets/android-icon-foreground.png"
       },
-      "package": "com.plate.app"
+      "package": "com.recipeboard.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -30,8 +30,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Plate needs access to your photos to share recipes.",
-          "cameraPermission": "Plate needs camera access to photograph dishes."
+          "photosPermission": "RecipeBoard needs access to your photos to share recipes.",
+          "cameraPermission": "RecipeBoard needs camera access to photograph dishes."
         }
       ]
     ]

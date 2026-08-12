@@ -28,7 +28,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="grid"
         options={{
-          title: 'Plate',
+          title: 'RecipeBoard',
           tabBarLabel: ({ focused }) => <TabLabel label="Grid" focused={focused} />,
           tabBarIcon: () => <Text>▦</Text>,
         }}

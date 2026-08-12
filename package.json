@@ -1,7 +1,7 @@
 {
-  "name": "plate",
+  "name": "recipeboard",
   "private": true,
-  "description": "Plate — grid-style recipe sharing with YOLO moderation",
+  "description": "RecipeBoard — grid-style recipe sharing with YOLO moderation",
   "scripts": {
     "mobile": "npm --prefix apps/mobile start",
     "mobile:web": "npm --prefix apps/mobile run web",
