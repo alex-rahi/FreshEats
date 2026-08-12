@@ -27,7 +27,7 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-const DEMO_KEY = 'plate.demo.session';
+const DEMO_KEY = 'fresheats.demo.session';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);

@@ -1,30 +1,30 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: plate-admin
-  namespace: plate
+  name: fresheats-admin
+  namespace: fresheats
   labels:
-    app: plate-admin
+    app: fresheats-admin
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: plate-admin
+      app: fresheats-admin
   template:
     metadata:
       labels:
-        app: plate-admin
+        app: fresheats-admin
     spec:
       containers:
         - name: admin
-          image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/plate-admin:latest
+          image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/fresheats-admin:latest
           ports:
             - containerPort: 3000
           envFrom:
             - configMapRef:
-                name: plate-config
+                name: fresheats-config
             - secretRef:
-                name: plate-secrets
+                name: fresheats-secrets
           resources:
             requests:
               cpu: 100m
@@ -42,11 +42,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: plate-admin
-  namespace: plate
+  name: fresheats-admin
+  namespace: fresheats
 spec:
   selector:
-    app: plate-admin
+    app: fresheats-admin
   ports:
     - port: 80
       targetPort: 3000

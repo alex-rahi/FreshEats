@@ -1,4 +1,4 @@
-"""Progressive AWS cost guardrails for Plate.
+"""Progressive AWS cost guardrails for FreshEats.
 
 Budget notifications (of $budget_limit, default $100):
   50% — alert only (email via SNS)
@@ -108,8 +108,8 @@ def _stop_rds(rds, instance_id: str) -> list[str]:
             rds.add_tags_to_resource(
                 ResourceName=db["DBInstanceArn"],
                 Tags=[
-                    {"Key": "plate:cost-cutoff", "Value": "true"},
-                    {"Key": "plate:cost-cutoff-action", "Value": "needs-manual-stop"},
+                    {"Key": "fresheats:cost-cutoff", "Value": "true"},
+                    {"Key": "fresheats:cost-cutoff-action", "Value": "needs-manual-stop"},
                 ],
             )
             return [f"rds:{instance_id}:tagged-multiaz"]

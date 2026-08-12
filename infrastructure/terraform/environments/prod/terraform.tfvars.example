@@ -1,6 +1,6 @@
 aws_region  = "us-east-1"
 environment = "prod"
-name        = "plate"
+name        = "fresheats"
 
 # Monthly budget (USD)
 budget_limit_usd = 100

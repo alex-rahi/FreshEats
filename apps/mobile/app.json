@@ -1,25 +1,25 @@
 {
   "expo": {
-    "name": "RecipeBoard",
-    "slug": "recipeboard",
+    "name": "FreshEats",
+    "slug": "fresheats",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "recipeboard",
+    "scheme": "fresheats",
     "userInterfaceStyle": "light",
     "splash": {
       "backgroundColor": "#F7F3EE"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.recipeboard.app"
+      "bundleIdentifier": "com.fresheats.app"
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#F7F3EE",
         "foregroundImage": "./assets/android-icon-foreground.png"
       },
-      "package": "com.recipeboard.app"
+      "package": "com.fresheats.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -30,8 +30,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "RecipeBoard needs access to your photos to share recipes.",
-          "cameraPermission": "RecipeBoard needs camera access to photograph dishes."
+          "photosPermission": "FreshEats needs access to your photos to share recipes.",
+          "cameraPermission": "FreshEats needs camera access to photograph dishes."
         }
       ]
     ]

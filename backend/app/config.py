@@ -33,8 +33,8 @@ class Settings(BaseSettings):
     redis_url: str = ""
 
     # Storage / queue
-    storage_bucket_raw: str = "plate-raw-uploads"
-    storage_bucket_recipes: str = "plate-recipe-images"
+    storage_bucket_raw: str = "fresheats-raw-uploads"
+    storage_bucket_recipes: str = "fresheats-recipe-images"
     cloudfront_domain: str = ""
     sqs_moderation_url: str = ""
 

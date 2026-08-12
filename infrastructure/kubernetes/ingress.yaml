@@ -1,8 +1,8 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: plate-ingress
-  namespace: plate
+  name: fresheats-ingress
+  namespace: fresheats
   annotations:
     kubernetes.io/ingress.class: nginx
     cert-manager.io/cluster-issuer: letsencrypt-prod
@@ -11,27 +11,27 @@ metadata:
 spec:
   tls:
     - hosts:
-        - api.plate.app
-        - admin.plate.app
-      secretName: plate-tls
+        - api.fresheats.app
+        - admin.fresheats.app
+      secretName: fresheats-tls
   rules:
-    - host: api.plate.app
+    - host: api.fresheats.app
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: plate-api
+                name: fresheats-api
                 port:
                   number: 80
-    - host: admin.plate.app
+    - host: admin.fresheats.app
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: plate-admin
+                name: fresheats-admin
                 port:
                   number: 80

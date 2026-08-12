@@ -6,7 +6,7 @@ variable "sqs_queue_arn" { type = string }
 variable "db_secret_arn" { type = string }
 variable "namespace" {
   type    = string
-  default = "plate"
+  default = "fresheats"
 }
 
 data "aws_caller_identity" "current" {}
@@ -32,7 +32,7 @@ data "aws_iam_policy_document" "api_assume" {
     condition {
       test     = "StringEquals"
       variable = "${local.oidc_host}:sub"
-      values   = ["system:serviceaccount:${var.namespace}:plate-api"]
+      values   = ["system:serviceaccount:${var.namespace}:fresheats-api"]
     }
   }
 }
@@ -80,7 +80,7 @@ data "aws_iam_policy_document" "worker_assume" {
     condition {
       test     = "StringEquals"
       variable = "${local.oidc_host}:sub"
-      values   = ["system:serviceaccount:${var.namespace}:plate-worker"]
+      values   = ["system:serviceaccount:${var.namespace}:fresheats-worker"]
     }
   }
 }

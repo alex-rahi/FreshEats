@@ -11,8 +11,8 @@ class WorkerSettings(BaseSettings):
     http_port: int = 8001
     aws_region: str = "us-east-1"
     sqs_moderation_url: str = ""
-    storage_bucket_raw: str = "plate-raw-uploads"
-    storage_bucket_recipes: str = "plate-recipe-images"
+    storage_bucket_raw: str = "fresheats-raw-uploads"
+    storage_bucket_recipes: str = "fresheats-recipe-images"
 
 
 settings = WorkerSettings()

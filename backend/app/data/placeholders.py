@@ -16,7 +16,7 @@ PLACEHOLDER_PROFILE = UserProfile(
     id=PLACEHOLDER_USER_ID,
     username="you",
     display_name="You",
-    bio="Home cook sharing weeknight plates.",
+    bio="Home cook sharing weeknight dishes.",
     recipe_count=2,
     created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
 )

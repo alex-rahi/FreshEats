@@ -10,7 +10,7 @@ terraform {
 
 variable "name" {
   type    = string
-  default = "plate"
+  default = "fresheats"
 }
 
 variable "cidr" {

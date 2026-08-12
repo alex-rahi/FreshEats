@@ -16,7 +16,7 @@ import { colors } from '../../src/constants/theme';
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
-  const [email, setEmail] = useState('demo@recipeboard.app');
+  const [email, setEmail] = useState('demo@fresheats.app');
   const [password, setPassword] = useState('password');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -40,7 +40,7 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.hero}>
-        <Text style={styles.brand}>RecipeBoard</Text>
+        <Text style={styles.brand}>FreshEats</Text>
         <Text style={styles.tagline}>Share recipes. Discover dishes.</Text>
       </View>
 

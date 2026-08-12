@@ -1,39 +1,39 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: plate-api
-  namespace: plate
+  name: fresheats-api
+  namespace: fresheats
   annotations:
-    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/plate-api-irsa
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/fresheats-api-irsa
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: plate-api
-  namespace: plate
+  name: fresheats-api
+  namespace: fresheats
   labels:
-    app: plate-api
+    app: fresheats-api
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: plate-api
+      app: fresheats-api
   template:
     metadata:
       labels:
-        app: plate-api
+        app: fresheats-api
     spec:
-      serviceAccountName: plate-api
+      serviceAccountName: fresheats-api
       containers:
         - name: api
-          image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/plate-api:latest
+          image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/fresheats-api:latest
           ports:
             - containerPort: 8000
           envFrom:
             - configMapRef:
-                name: plate-config
+                name: fresheats-config
             - secretRef:
-                name: plate-secrets
+                name: fresheats-secrets
           resources:
             requests:
               cpu: 250m
@@ -57,11 +57,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: plate-api
-  namespace: plate
+  name: fresheats-api
+  namespace: fresheats
 spec:
   selector:
-    app: plate-api
+    app: fresheats-api
   ports:
     - port: 80
       targetPort: 8000
@@ -70,13 +70,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: plate-api-hpa
-  namespace: plate
+  name: fresheats-api-hpa
+  namespace: fresheats
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: plate-api
+    name: fresheats-api
   minReplicas: 2
   maxReplicas: 10
   metrics:

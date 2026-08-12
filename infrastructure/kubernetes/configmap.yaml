@@ -1,16 +1,16 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: plate-config
-  namespace: plate
+  name: fresheats-config
+  namespace: fresheats
 data:
   AWS_REGION: "us-east-1"
   AUTH_PROVIDER: "cognito"
   USE_PLACEHOLDERS: "false"
   USE_LOCAL_YOLO: "false"
-  CORS_ORIGINS: "https://admin.plate.app,https://app.plate.app"
-  STORAGE_BUCKET_RAW: "plate-raw-uploads"
-  STORAGE_BUCKET_RECIPES: "plate-recipe-images"
+  CORS_ORIGINS: "https://admin.fresheats.app,https://app.fresheats.app"
+  STORAGE_BUCKET_RAW: "fresheats-raw-uploads"
+  STORAGE_BUCKET_RECIPES: "fresheats-recipe-images"
   YOLO_MODEL_PATH: "models/yolov8n.pt"
   MODERATION_THRESHOLD: "0.7"
-  NEXT_PUBLIC_API_URL: "https://api.plate.app"
+  NEXT_PUBLIC_API_URL: "https://api.fresheats.app"

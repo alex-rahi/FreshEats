@@ -9,7 +9,7 @@ export function Sidebar() {
   return (
     <aside className="w-56 shrink-0 border-r border-[var(--line)] bg-[var(--surface)] p-6">
       <div className="mb-10">
-        <div className="text-2xl font-semibold tracking-tight">RecipeBoard</div>
+        <div className="text-2xl font-semibold tracking-tight">FreshEats</div>
         <div className="mt-1 text-sm text-[var(--muted)]">Moderation</div>
       </div>
       <nav className="flex flex-col gap-2">

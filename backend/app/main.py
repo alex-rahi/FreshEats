@@ -24,8 +24,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="RecipeBoard API",
-    description="Backend for RecipeBoard — grid-style recipe sharing with YOLO moderation",
+    title="FreshEats API",
+    description="Backend for FreshEats — grid-style recipe sharing with YOLO moderation",
     version="1.0.0",
     lifespan=lifespan,
     docs_url="/docs",
@@ -58,7 +58,7 @@ app.mount("/media", StaticFiles(directory=str(uploads)), name="media")
 async def health():
     return {
         "status": "ok",
-        "service": "recipeboard-api",
+        "service": "fresheats-api",
         "placeholder_mode": settings.use_placeholders,
         "local_yolo": settings.use_local_yolo,
         "auth_provider": settings.auth_provider,

@@ -1,4 +1,4 @@
--- Plate Initial Schema
+-- FreshEats Initial Schema
 -- Recipe sharing with YOLO image moderation
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

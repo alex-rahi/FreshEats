@@ -18,7 +18,7 @@ type CognitoTokens = {
   sub: string;
 };
 
-const TOKEN_KEY = 'plate.cognito.tokens';
+const TOKEN_KEY = 'fresheats.cognito.tokens';
 
 async function storageGet(key: string) {
   try {

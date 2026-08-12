@@ -18,7 +18,7 @@ terraform {
 
   # Configure remote state for your account:
   # backend "s3" {
-  #   bucket = "plate-terraform-state"
+  #   bucket = "fresheats-terraform-state"
   #   key    = "prod/terraform.tfstate"
   #   region = "us-east-1"
   # }
@@ -28,7 +28,7 @@ provider "aws" {
   region = var.aws_region
   default_tags {
     tags = {
-      Project     = "plate"
+      Project     = "fresheats"
       Environment = var.environment
       ManagedBy   = "terraform"
     }
@@ -47,7 +47,7 @@ variable "environment" {
 
 variable "name" {
   type    = string
-  default = "plate"
+  default = "fresheats"
 }
 
 variable "budget_limit_usd" {

@@ -1,4 +1,4 @@
-# Plate on AWS (EKS + full AWS)
+# FreshEats on AWS (EKS + full AWS)
 
 ## Architecture
 
@@ -79,10 +79,10 @@ psql "$DATABASE_URL" -f infrastructure/sql/001_aws_schema.sql
 ## Configure Kubernetes secrets
 
 ```bash
-cp infrastructure/kubernetes/secrets.example.yaml /tmp/plate-secrets.yaml
+cp infrastructure/kubernetes/secrets.example.yaml /tmp/fresheats-secrets.yaml
 # fill values from terraform output
 kubectl apply -f infrastructure/kubernetes/namespace.yaml
-kubectl apply -f /tmp/plate-secrets.yaml
+kubectl apply -f /tmp/fresheats-secrets.yaml
 # patch IRSA role ARNs + ECR image URLs in deployment YAMLs
 kubectl apply -f infrastructure/kubernetes/
 ```
@@ -100,8 +100,8 @@ COGNITO_CLIENT_ID=...
 COGNITO_ISSUER=https://cognito-idp.us-east-1.amazonaws.com/...
 DATABASE_URL=postgresql://...
 SQS_MODERATION_URL=https://sqs...
-STORAGE_BUCKET_RAW=plate-raw-uploads
-STORAGE_BUCKET_RECIPES=plate-recipe-images
+STORAGE_BUCKET_RAW=fresheats-raw-uploads
+STORAGE_BUCKET_RECIPES=fresheats-recipe-images
 CLOUDFRONT_DOMAIN=dxxxx.cloudfront.net
 AWS_REGION=us-east-1
 ADMIN_SECRET=...
@@ -112,7 +112,7 @@ ADMIN_SECRET=...
 ```
 EXPO_PUBLIC_USE_PLACEHOLDERS=false
 EXPO_PUBLIC_USE_LOCAL_YOLO=false
-EXPO_PUBLIC_API_URL=https://api.plate.app
+EXPO_PUBLIC_API_URL=https://api.fresheats.app
 EXPO_PUBLIC_COGNITO_USER_POOL_ID=...
 EXPO_PUBLIC_COGNITO_CLIENT_ID=...
 EXPO_PUBLIC_AWS_REGION=us-east-1

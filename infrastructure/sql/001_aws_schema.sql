@@ -1,4 +1,4 @@
--- Plate AWS schema (RDS) — no Supabase auth.users dependency
+-- FreshEats AWS schema (RDS) — no Supabase auth.users dependency
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 

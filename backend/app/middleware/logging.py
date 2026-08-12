@@ -17,7 +17,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         start = time.perf_counter()
         response = await call_next(request)
         elapsed_ms = (time.perf_counter() - start) * 1000
-        logging.getLogger("plate.http").info(
+        logging.getLogger("fresheats.http").info(
             "%s %s → %s (%.1fms)",
             request.method,
             request.url.path,

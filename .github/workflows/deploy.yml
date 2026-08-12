@@ -1,4 +1,4 @@
-name: Deploy Plate to AWS
+name: Deploy FreshEats to AWS
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
-  EKS_CLUSTER: plate
+  EKS_CLUSTER: fresheats
 
 jobs:
   terraform:
@@ -101,9 +101,9 @@ jobs:
           kubectl apply -f infrastructure/kubernetes/ingress.yaml
       - name: Rollout
         run: |
-          kubectl -n plate set image deploy/plate-api api=${{ needs.terraform.outputs.ecr_api }}:${{ github.sha }}
-          kubectl -n plate set image deploy/plate-worker worker=${{ needs.terraform.outputs.ecr_worker }}:${{ github.sha }}
-          kubectl -n plate set image deploy/plate-admin admin=${{ needs.terraform.outputs.ecr_admin }}:${{ github.sha }}
-          kubectl -n plate rollout status deploy/plate-api
-          kubectl -n plate rollout status deploy/plate-worker
-          kubectl -n plate rollout status deploy/plate-admin
+          kubectl -n fresheats set image deploy/fresheats-api api=${{ needs.terraform.outputs.ecr_api }}:${{ github.sha }}
+          kubectl -n fresheats set image deploy/fresheats-worker worker=${{ needs.terraform.outputs.ecr_worker }}:${{ github.sha }}
+          kubectl -n fresheats set image deploy/fresheats-admin admin=${{ needs.terraform.outputs.ecr_admin }}:${{ github.sha }}
+          kubectl -n fresheats rollout status deploy/fresheats-api
+          kubectl -n fresheats rollout status deploy/fresheats-worker
+          kubectl -n fresheats rollout status deploy/fresheats-admin

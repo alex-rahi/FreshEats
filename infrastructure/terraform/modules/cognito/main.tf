@@ -1,11 +1,11 @@
 variable "name" { type = string }
 variable "callback_urls" {
   type    = list(string)
-  default = ["plate://auth", "http://localhost:8081"]
+  default = ["fresheats://auth", "http://localhost:8081"]
 }
 variable "logout_urls" {
   type    = list(string)
-  default = ["plate://logout", "http://localhost:8081"]
+  default = ["fresheats://logout", "http://localhost:8081"]
 }
 
 resource "aws_cognito_user_pool" "this" {

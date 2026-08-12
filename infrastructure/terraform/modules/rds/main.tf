@@ -24,9 +24,9 @@ resource "aws_secretsmanager_secret" "db" {
 resource "aws_secretsmanager_secret_version" "db" {
   secret_id = aws_secretsmanager_secret.db.id
   secret_string = jsonencode({
-    username = "plate"
+    username = "fresheats"
     password = random_password.db.result
-    dbname   = "plate"
+    dbname   = "fresheats"
   })
 }
 
@@ -37,8 +37,8 @@ resource "aws_db_instance" "this" {
   instance_class             = var.instance_class
   allocated_storage          = 50
   max_allocated_storage      = 200
-  db_name                    = "plate"
-  username                   = "plate"
+  db_name                    = "fresheats"
+  username                   = "fresheats"
   password                   = random_password.db.result
   db_subnet_group_name       = aws_db_subnet_group.this.name
   vpc_security_group_ids     = var.security_group_ids
@@ -58,6 +58,6 @@ output "db_name" { value = aws_db_instance.this.db_name }
 output "secret_arn" { value = aws_secretsmanager_secret.db.arn }
 output "instance_id" { value = aws_db_instance.this.id }
 output "database_url" {
-  value     = "postgresql://plate:${random_password.db.result}@${aws_db_instance.this.address}:5432/plate"
+  value     = "postgresql://fresheats:${random_password.db.result}@${aws_db_instance.this.address}:5432/fresheats"
   sensitive = true
 }

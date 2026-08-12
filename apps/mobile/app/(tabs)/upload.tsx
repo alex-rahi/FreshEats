@@ -101,7 +101,7 @@ export default function UploadScreen() {
         onChangeText={setDescription}
         style={[styles.input, styles.area]}
         multiline
-        placeholder="A quick weeknight plate with blistered tomatoes."
+        placeholder="A quick weeknight dish with blistered tomatoes."
         placeholderTextColor={colors.muted}
       />
 

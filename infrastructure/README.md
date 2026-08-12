@@ -1,4 +1,4 @@
-# Plate AWS infrastructure
+# FreshEats AWS infrastructure
 
 - `terraform/` — modules + `environments/prod` (includes cost guardrails)
 - `kubernetes/` — EKS manifests (api, worker, admin, ingress)

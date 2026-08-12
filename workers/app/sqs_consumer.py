@@ -16,7 +16,7 @@ from app.config import settings
 from app.pipeline.analyze import analyze_path
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("plate-sqs-consumer")
+logger = logging.getLogger("fresheats-sqs-consumer")
 
 
 async def _get_pool() -> asyncpg.Pool:
@@ -146,7 +146,7 @@ async def poll_forever() -> None:
 
         @app.get("/health")
         def health():
-            return {"status": "ok", "service": "plate-sqs-consumer"}
+            return {"status": "ok", "service": "fresheats-sqs-consumer"}
 
         uvicorn.run(app, host="0.0.0.0", port=8001, log_level="warning")
 

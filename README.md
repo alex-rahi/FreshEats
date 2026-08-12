@@ -1,8 +1,8 @@
-![RecipeBoard demo — responsive recipe image grid](screenshots/recipeboard-grid.png)
+![FreshEats demo — responsive recipe image grid](screenshots/fresheats-grid.png)
 
-# RecipeBoard
+# FreshEats
 
-**RecipeBoard** is a cross-platform, image-first recipe sharing app. Users sign up, upload dish photos, browse a responsive grid, like and comment, and every uploaded image is moderated with **YOLOv8** before it goes live — with uncertain cases routed to a human review queue.
+**FreshEats** is a cross-platform, image-first recipe sharing app. Users sign up, upload dish photos, browse a responsive grid, like and comment, and every uploaded image is moderated with **YOLOv8** before it goes live — with uncertain cases routed to a human review queue.
 
 Built as a working end-to-end MVP (not mockups), with a path to production on **AWS EKS** and progressive **budget / cost scaling** guardrails.
 
@@ -97,7 +97,7 @@ See [docs/AWS.md](docs/AWS.md) for apply steps, env matrices, and upload flow.
 
 ## Phase 1 — budget alerts & shutoff
 
-RecipeBoard ships cost guardrails so a demo / interview environment does not run away on AWS spend.
+FreshEats ships cost guardrails so a demo / interview environment does not run away on AWS spend.
 
 Default monthly budget: **$100**.
 
@@ -159,10 +159,10 @@ screenshots/                  Demo UI
 
 ## Content & Safety Disclaimer
 
-RecipeBoard uses automated moderation (including YOLO-based image analysis) and human review to help identify and remove inappropriate or unsafe content. However, no moderation system is perfect, and we cannot guarantee that all user-generated content will be accurate, appropriate, safe, or reviewed before it appears.
+FreshEats uses automated moderation (including YOLO-based image analysis) and human review to help identify and remove inappropriate or unsafe content. However, no moderation system is perfect, and we cannot guarantee that all user-generated content will be accurate, appropriate, safe, or reviewed before it appears.
 
 Recipes, ingredients, nutrition claims, cooking techniques, equipment guidance, and other information shared by users are provided for general informational purposes only and should not be considered professional medical, dietary, or food-safety advice. Users prepare and consume food, try recipes, and use kitchen equipment at their own risk.
 
-RecipeBoard does not endorse or assume responsibility for user-generated content or for injuries, illness, losses, or damages resulting from reliance on or participation in such content. Follow safe food-handling practices, account for allergies and dietary restrictions, and seek appropriate professional guidance when necessary.
+FreshEats does not endorse or assume responsibility for user-generated content or for injuries, illness, losses, or damages resulting from reliance on or participation in such content. Follow safe food-handling practices, account for allergies and dietary restrictions, and seek appropriate professional guidance when necessary.
 
 Users can report content they believe violates our Community Guidelines for further review.
