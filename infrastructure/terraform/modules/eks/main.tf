@@ -6,11 +6,20 @@ variable "cluster_version" {
 }
 variable "node_instance_types" {
   type    = list(string)
-  default = ["t3.large"]
+  default = ["t3.medium"]
 }
 variable "desired_size" {
   type    = number
-  default = 3
+  default = 2
+}
+variable "min_size" {
+  type    = number
+  default = 1
+}
+variable "max_size" {
+  type        = number
+  default     = 2
+  description = "Hard cap so HPA cannot grow node spend past the budget envelope"
 }
 
 data "aws_iam_policy_document" "eks_assume" {
@@ -86,8 +95,8 @@ resource "aws_eks_node_group" "general" {
 
   scaling_config {
     desired_size = var.desired_size
-    max_size     = 6
-    min_size     = 2
+    max_size     = var.max_size
+    min_size     = var.min_size
   }
 
   depends_on = [

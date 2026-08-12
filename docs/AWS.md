@@ -18,29 +18,42 @@ Admin (Next.js on EKS) ──X-Admin-Secret──▶ FastAPI
 |-------|-------------|
 | Auth | Cognito User Pool |
 | API / Admin / Worker | EKS |
-| Database | RDS PostgreSQL 16 (Multi-AZ) |
+| Database | RDS PostgreSQL 16 (single-AZ micro by default) |
 | Images | S3 + CloudFront OAC |
 | Moderation queue | SQS + DLQ |
 | Cache | ElastiCache Redis |
 | Images/repos | ECR |
 | Secrets | Secrets Manager + K8s Secret |
 | IaC | Terraform under `infrastructure/terraform/` |
-| Cost guardrails | AWS Budgets ($100 default) → SNS → Lambda cutoff |
+| Cost guardrails | AWS Budgets ($250 default) → SNS → Lambda progressive scale/shutoff |
 
-## Cost guardrails ($100 monthly budget)
+## Cost envelope (stay under budget)
 
-Progressive spend protection (`modules/cost_guardrails`):
+Steady-state is sized so normal HPA scaling **cannot** explode spend past the node hard-cap:
 
-| Phase | Threshold | Action |
-|-------|-----------|--------|
-| **1 / 2** | **50%** ($50) | SNS email alert only |
-| **2** | **70%** ($70) | Scale EKS node groups → **desired=1** (keep minimal footprint) |
-| **1 / 2** | **80%** ($80) | **Shutoff**: EKS → 0, delete ElastiCache, stop/tag RDS |
+| Resource | Budget-safe default |
+|----------|---------------------|
+| EKS nodes | `t3.medium`, desired **2**, **max 2**, min 1 |
+| RDS | `db.t4g.micro`, **single-AZ**, 20 GB (stoppable at shutoff) |
+| Redis | `cache.t4g.micro` × 1 |
+| API HPA | 1–3 replicas |
+| Worker HPA | 1–2 replicas |
+| Monthly budget | **$250** (EKS control plane + NAT alone is ~$100 before app nodes) |
+
+App pods scale with load (HPA). Node count is capped in Terraform, so more pods pack onto the same 2 nodes instead of opening a third.
+
+## Cost guardrails (progressive — avoid crossing shutoff)
+
+| Threshold | Action |
+|-----------|--------|
+| **50%** | Soft scale: EKS → **desired=1** (email via SNS) |
+| **70%** | Hard lock: EKS → **desired=1, max=1** (cannot grow) |
+| **80%** | Shutoff: EKS → 0, delete Redis, stop RDS |
 
 Configure in `infrastructure/terraform/environments/prod/terraform.tfvars`:
 
 ```hcl
-budget_limit_usd    = 100
+budget_limit_usd    = 250
 budget_alert_emails = ["you@example.com"]
 # optional overrides:
 # alert_threshold   = 50
@@ -50,7 +63,7 @@ budget_alert_emails = ["you@example.com"]
 
 **Limits to know:**
 - AWS Budgets lag by ~hours — this is not instantaneous to-the-penny.
-- Multi-AZ RDS cannot be stopped via API; the Lambda tags it and you must stop/delete manually (or change RDS to single-AZ in Terraform for auto-stop).
+- Single-AZ RDS (default) can be stopped by the shutoff Lambda; Multi-AZ cannot (would only be tagged).
 - S3 / Cognito / ECR data is kept (storage is cheap); only compute is burned down.
 - Confirm the SNS email subscription after `terraform apply`.
 - Optional: attach `deny_spend_policy_arn` to IAM users/roles to block new EC2/EKS/RDS creates after a breach.
@@ -102,7 +115,7 @@ aws lambda invoke \
 
 Expect `"phase":"shutoff"`, `"dry_run":true`, and actions like `dry_run:eks:...->desired=0`.
 
-Use `"threshold": 70` / `50` to exercise scale vs alert without mutations either.
+Use `"threshold": 70` / `50` to exercise **lock** vs **soft_scale** without mutations either.
 
 ### 3. Turn dry-run off for real shutoff
 

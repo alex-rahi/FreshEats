@@ -83,7 +83,7 @@ Infrastructure lives under `infrastructure/terraform/` and `infrastructure/kuber
 |---------|---------|
 | Compute | EKS (API, YOLO worker, admin) |
 | Auth | Cognito User Pool |
-| Database | RDS PostgreSQL (Multi-AZ) |
+| Database | RDS PostgreSQL (single-AZ micro by default) |
 | Storage / CDN | S3 + CloudFront OAC |
 | Queue | SQS moderation + DLQ |
 | Cache | ElastiCache Redis |
@@ -95,28 +95,32 @@ See [docs/AWS.md](docs/AWS.md) for apply steps, env matrices, and upload flow.
 
 ---
 
-## Phase 1 — budget alerts & shutoff
+## Budget envelope & progressive scale
 
-FreshEats ships cost guardrails so a demo / interview environment does not run away on AWS spend.
+FreshEats is sized so normal load stays inside a lean monthly envelope, and the budget Lambda shrinks spend **before** hard shutoff.
 
-Default monthly budget: **$100**.
+Default monthly budget: **$250** (EKS + NAT alone is ~$100 before app nodes; a $100 all-in budget is not realistic for this stack).
 
-| Phase | Threshold | Action |
-|-------|-----------|--------|
-| **Phase 1** | **50%** ($50) | SNS **email alert** only |
-| **Phase 2** | **70%** ($70) | **Scale** EKS node groups down to a minimal footprint (`desired=1`) |
-| **Phase 1 / 2** | **80%** ($80) | **Shutoff** — EKS → 0 nodes, delete ElastiCache, stop/tag RDS |
+| Layer | Cap |
+|-------|-----|
+| EKS nodes | max **2** × `t3.medium` |
+| API / worker HPA | 1–3 / 1–2 replicas (pack onto existing nodes) |
+| RDS | `db.t4g.micro` single-AZ |
+
+| Threshold | Action |
+|-----------|--------|
+| **50%** | Soft scale — EKS `desired=1` (+ email) |
+| **70%** | Hard lock — EKS `desired=1`, `max=1` (cannot grow) |
+| **80%** | Shutoff — EKS → 0, delete Redis, stop RDS |
 
 Implemented in `infrastructure/terraform/modules/cost_guardrails/` (AWS Budgets → SNS → Lambda).
 
-Configure:
-
 ```hcl
-budget_limit_usd    = 100
+budget_limit_usd    = 250
 budget_alert_emails = ["you@example.com"]
 ```
 
-Budgets report with a delay (hours), not to-the-penny realtime. Multi-AZ RDS cannot be API-stopped; the Lambda tags it for manual follow-up. Object storage and Cognito data are retained.
+Budgets report with a delay (hours). Object storage and Cognito data are retained on shutoff.
 
 ---
 

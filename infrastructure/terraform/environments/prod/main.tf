@@ -52,8 +52,8 @@ variable "name" {
 
 variable "budget_limit_usd" {
   type        = number
-  default     = 100
-  description = "Monthly AWS spend ($USD) that triggers emergency compute cutoff"
+  default     = 250
+  description = "Monthly AWS spend ($USD). Lean EKS+NAT demo envelope; guardrails shrink before shutoff."
 }
 
 variable "budget_alert_emails" {

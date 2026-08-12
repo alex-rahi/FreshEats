@@ -1,12 +1,11 @@
 """Progressive AWS cost guardrails for FreshEats.
 
-Budget notifications (of $budget_limit, default $100):
-  50% — alert only (email via SNS)
-  70% — scale EKS node groups down (min 1, desired 1)
-  80% — full shutoff: EKS → 0, delete Redis, stop/tag RDS
+Designed so steady-state stays inside the monthly budget envelope, and
+spend triggers shrink *before* hard shutoff:
 
-Phase 1: alert @ 50%, shutoff @ 80%
-Phase 2: adds 70% progressive scale-down before hard cutoff
+  50% — soft scale: EKS → desired=1 (email via SNS too)
+  70% — hard lock: EKS → desired=1, max=1 (cannot grow)
+  80% — shutoff: EKS → 0, delete Redis, stop/tag RDS
 
 Set DRY_RUN=true to exercise threshold routing and planned actions
 without calling mutating AWS APIs.
@@ -65,7 +64,6 @@ def _extract_threshold(event: dict) -> float | None:
                 pass
 
         blob = f"{subject} {raw}"
-        # Match "80%", "80.0", "threshold of 80"
         m = re.search(r"(?:threshold[^0-9]*)?(\d+(?:\.\d+)?)\s*%", blob, re.I)
         if m:
             return float(m.group(1))
@@ -82,7 +80,7 @@ def _scale_eks(eks, cluster: str, desired: int, minimum: int, maximum: int) -> l
     paginator = eks.get_paginator("list_nodegroups")
     for page in paginator.paginate(clusterName=cluster):
         for ng in page.get("nodegroups", []):
-            plan = f"eks:{cluster}/{ng}->desired={desired}"
+            plan = f"eks:{cluster}/{ng}->desired={desired},max={maximum}"
             if DRY_RUN:
                 logger.info("[DRY_RUN] would scale node group %s", plan)
                 actions.append(f"dry_run:{plan}")
@@ -94,12 +92,15 @@ def _scale_eks(eks, cluster: str, desired: int, minimum: int, maximum: int) -> l
                 minimum,
                 maximum,
             )
+            # EKS requires maxSize >= 1 even when desired is 0
+            max_size = 1 if desired == 0 else max(maximum, desired, 1)
+            min_size = 0 if desired == 0 else minimum
             eks.update_nodegroup_config(
                 clusterName=cluster,
                 nodegroupName=ng,
                 scalingConfig={
-                    "minSize": minimum,
-                    "maxSize": max(maximum, desired, 1) if desired > 0 else 1,
+                    "minSize": min_size,
+                    "maxSize": max_size,
                     "desiredSize": desired,
                 },
             )
@@ -107,9 +108,8 @@ def _scale_eks(eks, cluster: str, desired: int, minimum: int, maximum: int) -> l
     return actions
 
 
-def _plan_scale_eks_no_api(cluster: str, desired: int) -> list[str]:
-    """Dry-run fallback when even list APIs should be skipped."""
-    return [f"dry_run:eks:{cluster}/*->desired={desired}"]
+def _plan_scale_eks_no_api(cluster: str, desired: int, maximum: int) -> list[str]:
+    return [f"dry_run:eks:{cluster}/*->desired={desired},max={maximum}"]
 
 
 def _stop_rds(rds, instance_id: str) -> list[str]:
@@ -163,10 +163,22 @@ def _phase_for_threshold(threshold: float) -> str:
     if threshold >= SHUTOFF_THRESHOLD:
         return "shutoff"
     if threshold >= SCALE_THRESHOLD:
-        return "scale"
+        return "lock"
     if threshold >= ALERT_THRESHOLD:
-        return "alert"
+        return "soft_scale"
     return "none"
+
+
+def _eks_actions(desired: int, minimum: int, maximum: int) -> list[str]:
+    if DRY_RUN:
+        try:
+            eks = _boto3().client("eks", region_name=AWS_REGION)
+            return _scale_eks(eks, EKS_CLUSTER, desired=desired, minimum=minimum, maximum=maximum)
+        except Exception as exc:
+            logger.warning("[DRY_RUN] EKS list failed (%s); using generic plan", exc)
+            return _plan_scale_eks_no_api(EKS_CLUSTER, desired=desired, maximum=maximum)
+    eks = _boto3().client("eks", region_name=AWS_REGION)
+    return _scale_eks(eks, EKS_CLUSTER, desired=desired, minimum=minimum, maximum=maximum)
 
 
 def handler(event, context):
@@ -174,54 +186,55 @@ def handler(event, context):
     logger.info("DRY_RUN=%s", DRY_RUN)
     threshold = _extract_threshold(event)
     if threshold is None:
-        logger.warning("Could not parse budget threshold — treating as alert-only")
-        return {"ok": True, "phase": "alert", "threshold": None, "actions": [], "dry_run": DRY_RUN}
+        logger.warning("Could not parse budget threshold — treating as soft_scale")
+        return {"ok": True, "phase": "soft_scale", "threshold": None, "actions": [], "dry_run": DRY_RUN}
 
     phase = _phase_for_threshold(threshold)
     logger.info("Threshold=%.1f%% → phase=%s", threshold, phase)
 
-    if phase == "alert" or phase == "none":
+    if phase == "none":
         return {
             "ok": True,
             "phase": phase,
             "threshold": threshold,
             "actions": [],
-            "skipped": "alert_only",
+            "skipped": "below_alert",
             "dry_run": DRY_RUN,
         }
 
     actions: list[str] = []
 
-    if phase == "scale":
-        if DRY_RUN:
-            # Prefer planning without mutating; still try list if credentials allow.
-            try:
-                eks = _boto3().client("eks", region_name=AWS_REGION)
-                actions.extend(_scale_eks(eks, EKS_CLUSTER, desired=1, minimum=1, maximum=2))
-            except Exception as exc:
-                logger.warning("[DRY_RUN] EKS list failed (%s); using generic plan", exc)
-                actions.extend(_plan_scale_eks_no_api(EKS_CLUSTER, desired=1))
-        else:
-            eks = _boto3().client("eks", region_name=AWS_REGION)
-            actions.extend(_scale_eks(eks, EKS_CLUSTER, desired=1, minimum=1, maximum=2))
-        return {"ok": True, "phase": "scale", "threshold": threshold, "actions": actions, "dry_run": DRY_RUN}
+    if phase == "soft_scale":
+        # 50%: shrink to 1 node but allow max=2 if load recovers briefly
+        actions.extend(_eks_actions(desired=1, minimum=1, maximum=2))
+        return {
+            "ok": True,
+            "phase": "soft_scale",
+            "threshold": threshold,
+            "actions": actions,
+            "dry_run": DRY_RUN,
+        }
 
-    # Phase 1/2 shutoff at 80%
+    if phase == "lock":
+        # 70%: pin to a single node — HPA cannot force another node
+        actions.extend(_eks_actions(desired=1, minimum=1, maximum=1))
+        return {
+            "ok": True,
+            "phase": "lock",
+            "threshold": threshold,
+            "actions": actions,
+            "dry_run": DRY_RUN,
+        }
+
+    # 80%: full shutoff
+    actions.extend(_eks_actions(desired=0, minimum=0, maximum=1))
     if DRY_RUN:
-        try:
-            eks = _boto3().client("eks", region_name=AWS_REGION)
-            actions.extend(_scale_eks(eks, EKS_CLUSTER, desired=0, minimum=0, maximum=1))
-        except Exception as exc:
-            logger.warning("[DRY_RUN] EKS list failed (%s); using generic plan", exc)
-            actions.extend(_plan_scale_eks_no_api(EKS_CLUSTER, desired=0))
         actions.extend(_stop_rds(None, RDS_INSTANCE_ID))
         actions.extend(_delete_redis(None, REDIS_CLUSTER_ID))
     else:
         boto3 = _boto3()
-        eks = boto3.client("eks", region_name=AWS_REGION)
         rds = boto3.client("rds", region_name=AWS_REGION)
         elasticache = boto3.client("elasticache", region_name=AWS_REGION)
-        actions.extend(_scale_eks(eks, EKS_CLUSTER, desired=0, minimum=0, maximum=1))
         actions.extend(_stop_rds(rds, RDS_INSTANCE_ID))
         actions.extend(_delete_redis(elasticache, REDIS_CLUSTER_ID))
 

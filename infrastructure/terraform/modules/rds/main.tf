@@ -3,7 +3,16 @@ variable "subnet_ids" { type = list(string) }
 variable "security_group_ids" { type = list(string) }
 variable "instance_class" {
   type    = string
-  default = "db.t4g.medium"
+  default = "db.t4g.micro"
+}
+variable "multi_az" {
+  type        = bool
+  default     = false
+  description = "Single-AZ by default to fit budget and allow Lambda stop at shutoff"
+}
+variable "allocated_storage" {
+  type    = number
+  default = 20
 }
 
 resource "random_password" "db" {
@@ -35,19 +44,19 @@ resource "aws_db_instance" "this" {
   engine                     = "postgres"
   engine_version             = "16"
   instance_class             = var.instance_class
-  allocated_storage          = 50
-  max_allocated_storage      = 200
+  allocated_storage          = var.allocated_storage
+  max_allocated_storage      = 50
   db_name                    = "fresheats"
   username                   = "fresheats"
   password                   = random_password.db.result
   db_subnet_group_name       = aws_db_subnet_group.this.name
   vpc_security_group_ids     = var.security_group_ids
-  multi_az                   = true
+  multi_az                   = var.multi_az
   publicly_accessible        = false
   storage_encrypted          = true
   skip_final_snapshot        = true
   deletion_protection        = false
-  backup_retention_period    = 7
+  backup_retention_period    = 3
   auto_minor_version_upgrade = true
   tags                       = { Name = "${var.name}-postgres" }
 }

@@ -4,8 +4,8 @@ variable "name" {
 
 variable "budget_limit_usd" {
   type        = number
-  default     = 100
-  description = "Monthly AWS spend budget in USD"
+  default     = 250
+  description = "Monthly AWS spend budget in USD (EKS+NAT baseline needs ~$100+ before app nodes)"
 }
 
 variable "alert_emails" {
@@ -34,13 +34,13 @@ variable "aws_region" {
 variable "alert_threshold" {
   type        = number
   default     = 50
-  description = "Phase 1/2: email alert only"
+  description = "Soft scale EKS to desired=1 (email also fires via SNS)"
 }
 
 variable "scale_threshold" {
   type        = number
   default     = 70
-  description = "Phase 2: scale EKS down to minimal nodes"
+  description = "Hard lock EKS to desired=1 max=1 so spend cannot grow"
 }
 
 variable "shutoff_threshold" {
@@ -197,7 +197,7 @@ resource "aws_budgets_budget" "monthly" {
     use_blended                = false
   }
 
-  # Phase 1/2 — 50% alert
+  # Soft scale @ 50% — shrink before spend climbs further
   notification {
     comparison_operator       = "GREATER_THAN"
     threshold                 = var.alert_threshold
@@ -206,7 +206,7 @@ resource "aws_budgets_budget" "monthly" {
     subscriber_sns_topic_arns = [aws_sns_topic.budget.arn]
   }
 
-  # Phase 2 — 70% scale-down
+  # Hard lock @ 70% — pin to 1 node (max=1)
   notification {
     comparison_operator       = "GREATER_THAN"
     threshold                 = var.scale_threshold
@@ -215,7 +215,7 @@ resource "aws_budgets_budget" "monthly" {
     subscriber_sns_topic_arns = [aws_sns_topic.budget.arn]
   }
 
-  # Phase 1/2 — 80% shutoff (actual)
+  # Shutoff @ 80% (actual)
   notification {
     comparison_operator       = "GREATER_THAN"
     threshold                 = var.shutoff_threshold
@@ -224,7 +224,7 @@ resource "aws_budgets_budget" "monthly" {
     subscriber_sns_topic_arns = [aws_sns_topic.budget.arn]
   }
 
-  # Phase 1/2 — 80% shutoff (forecasted early warning → same shutoff path)
+  # Shutoff @ 80% (forecasted early warning → same shutoff path)
   notification {
     comparison_operator       = "GREATER_THAN"
     threshold                 = var.shutoff_threshold
