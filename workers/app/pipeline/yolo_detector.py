@@ -26,6 +26,7 @@ LABEL_ALIASES: dict[str, str] = {
     "knife": "knife",
     "spoon": "spoon",
     "dining table": "dining table",
+    "plate": "dish",
     "person": "person",
     "oven": "oven",
     "microwave": "microwave",

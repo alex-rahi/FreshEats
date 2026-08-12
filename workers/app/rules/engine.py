@@ -28,11 +28,10 @@ class EvaluationContext:
 
 
 # COCO food + cooking context labels (YOLOv8n)
-# Note: "plate" here means dinnerware / dishware, not the product name.
 FOOD_OBJECTS = {
     "banana", "apple", "sandwich", "orange", "broccoli", "carrot",
     "hot dog", "pizza", "donut", "cake", "bowl", "bottle", "wine glass",
-    "cup", "fork", "knife", "spoon", "dining table", "food", "plate",
+    "cup", "fork", "knife", "spoon", "dining table", "food", "dish",
     "meal", "ingredient",
 }
 
