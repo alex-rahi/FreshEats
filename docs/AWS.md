@@ -121,6 +121,36 @@ Use `"threshold": 70` / `50` to exercise **lock** vs **soft_scale** without muta
 
 Set `cost_guardrails_dry_run = false`, apply, then re-invoke the same payload (or wait for a real budget breach). Live mode **will** scale EKS to 0, delete Redis, and stop/tag RDS.
 
+## Monitor scale & shutoff
+
+Terraform creates a CloudWatch dashboard and alarms on the budget SNS topic:
+
+| Signal | What fires |
+|--------|------------|
+| Soft scale / lock / shutoff | Log metric filter → alarm → SNS email |
+| Lambda errors | `AWS/Lambda` Errors → SNS |
+| RDS stopped | EventBridge `RDS-EVENT-0087` → SNS |
+| Lambda completion | SNS publish with phase + actions JSON |
+
+```bash
+# Dashboard URL after apply
+terraform output -raw cost_guardrails_dashboard_url
+
+# Or open: CloudWatch → Dashboards → fresheats-cost-guardrails
+```
+
+After any shutoff (live or dry-run), confirm on the dashboard **Guardrail phases** widget and CLI:
+
+```bash
+aws eks describe-nodegroup --cluster-name fresheats --nodegroup-name fresheats-general \
+  --query 'nodegroup.scalingConfig'
+aws rds describe-db-instances --db-instance-identifier fresheats-postgres \
+  --query 'DBInstances[0].DBInstanceStatus'
+aws elasticache describe-cache-clusters --cache-cluster-id <redis-id>
+```
+
+Dry-run still increments **DryRunEvents** / phase metrics and emails SNS, but does not mutate EKS/RDS/Redis.
+
 ## Apply infrastructure
 
 ```bash

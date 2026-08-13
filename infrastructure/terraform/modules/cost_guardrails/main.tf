@@ -130,6 +130,14 @@ data "aws_iam_policy_document" "cutoff" {
     ]
     resources = ["*"]
   }
+
+  statement {
+    sid = "NotifySns"
+    actions = [
+      "sns:Publish",
+    ]
+    resources = [aws_sns_topic.budget.arn]
+  }
 }
 
 resource "aws_iam_role_policy" "cutoff" {
@@ -157,8 +165,11 @@ resource "aws_lambda_function" "cutoff" {
       SCALE_THRESHOLD   = tostring(var.scale_threshold)
       SHUTOFF_THRESHOLD = tostring(var.shutoff_threshold)
       DRY_RUN           = var.dry_run ? "true" : "false"
+      SNS_TOPIC_ARN     = aws_sns_topic.budget.arn
     }
   }
+
+  depends_on = [aws_cloudwatch_log_group.cutoff]
 }
 
 resource "aws_sns_topic_subscription" "lambda" {

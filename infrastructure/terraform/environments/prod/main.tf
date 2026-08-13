@@ -187,6 +187,8 @@ output "budget_sns_topic_arn" { value = module.cost_guardrails.sns_topic_arn }
 output "cost_cutoff_lambda_arn" { value = module.cost_guardrails.cutoff_lambda_arn }
 output "deny_spend_policy_arn" { value = module.cost_guardrails.deny_spend_policy_arn }
 output "cost_guardrails_dry_run" { value = module.cost_guardrails.dry_run }
+output "cost_guardrails_dashboard_name" { value = module.cost_guardrails.cost_guardrails_dashboard_name }
+output "cost_guardrails_dashboard_url" { value = module.cost_guardrails.cost_guardrails_dashboard_url }
 output "database_url" {
   value     = module.rds.database_url
   sensitive = true

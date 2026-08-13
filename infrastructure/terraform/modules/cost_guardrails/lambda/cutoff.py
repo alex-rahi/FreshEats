@@ -25,6 +25,7 @@ EKS_CLUSTER = os.environ["EKS_CLUSTER_NAME"]
 RDS_INSTANCE_ID = os.environ.get("RDS_INSTANCE_ID", "")
 REDIS_CLUSTER_ID = os.environ.get("REDIS_CLUSTER_ID", "")
 AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
+SNS_TOPIC_ARN = os.environ.get("SNS_TOPIC_ARN", "")
 DRY_RUN = os.environ.get("DRY_RUN", "false").lower() in {"1", "true", "yes", "on"}
 
 # Phase thresholds (% of monthly budget)
@@ -181,13 +182,41 @@ def _eks_actions(desired: int, minimum: int, maximum: int) -> list[str]:
     return _scale_eks(eks, EKS_CLUSTER, desired=desired, minimum=minimum, maximum=maximum)
 
 
+def _notify(result: dict) -> None:
+    """Emit a stable log line for metric filters and optional SNS email."""
+    phase = result.get("phase")
+    dry = result.get("dry_run")
+    logger.info(
+        "COST_GUARDRAIL_EVENT phase=%s dry_run=%s threshold=%s actions=%s",
+        phase,
+        str(dry).lower(),
+        result.get("threshold"),
+        result.get("actions"),
+    )
+    if dry:
+        logger.info("COST_GUARDRAIL_EVENT dry_run=true")
+    if not SNS_TOPIC_ARN:
+        return
+    try:
+        subject = f"FreshEats cost guardrail: {phase}" + (" [DRY_RUN]" if dry else "")
+        _boto3().client("sns", region_name=AWS_REGION).publish(
+            TopicArn=SNS_TOPIC_ARN,
+            Subject=subject[:100],
+            Message=json.dumps(result, indent=2),
+        )
+    except Exception as exc:
+        logger.exception("SNS notify failed: %s", exc)
+
+
 def handler(event, context):
     logger.info("Budget event received: %s", json.dumps(event))
     logger.info("DRY_RUN=%s", DRY_RUN)
     threshold = _extract_threshold(event)
     if threshold is None:
         logger.warning("Could not parse budget threshold — treating as soft_scale")
-        return {"ok": True, "phase": "soft_scale", "threshold": None, "actions": [], "dry_run": DRY_RUN}
+        result = {"ok": True, "phase": "soft_scale", "threshold": None, "actions": [], "dry_run": DRY_RUN}
+        _notify(result)
+        return result
 
     phase = _phase_for_threshold(threshold)
     logger.info("Threshold=%.1f%% → phase=%s", threshold, phase)
@@ -205,26 +234,28 @@ def handler(event, context):
     actions: list[str] = []
 
     if phase == "soft_scale":
-        # 50%: shrink to 1 node but allow max=2 if load recovers briefly
         actions.extend(_eks_actions(desired=1, minimum=1, maximum=2))
-        return {
+        result = {
             "ok": True,
             "phase": "soft_scale",
             "threshold": threshold,
             "actions": actions,
             "dry_run": DRY_RUN,
         }
+        _notify(result)
+        return result
 
     if phase == "lock":
-        # 70%: pin to a single node — HPA cannot force another node
         actions.extend(_eks_actions(desired=1, minimum=1, maximum=1))
-        return {
+        result = {
             "ok": True,
             "phase": "lock",
             "threshold": threshold,
             "actions": actions,
             "dry_run": DRY_RUN,
         }
+        _notify(result)
+        return result
 
     # 80%: full shutoff
     actions.extend(_eks_actions(desired=0, minimum=0, maximum=1))
@@ -246,4 +277,5 @@ def handler(event, context):
         "dry_run": DRY_RUN,
     }
     logger.info("Shutoff %s: %s", "planned" if DRY_RUN else "complete", result)
+    _notify(result)
     return result
