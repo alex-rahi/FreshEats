@@ -90,37 +90,19 @@ Infrastructure lives under `infrastructure/terraform/` and `infrastructure/kuber
 | Images | ECR |
 | IAM | IRSA for API / worker |
 | Deploy | GitHub Actions OIDC |
+| Cost control | Budgets → SNS → cutoff Lambda + CloudWatch dashboard |
 
 See [docs/AWS.md](docs/AWS.md) for apply steps, env matrices, and upload flow.
 
 ---
 
-## Budget envelope & progressive scale
+## Cost guardrails roadmap
 
-FreshEats is sized so normal load stays inside a lean monthly envelope, and the budget Lambda shrinks spend **before** hard shutoff.
+**Phase 1** — shutdown testing · live shutdown
 
-Default monthly budget: **$250** (EKS + NAT alone is ~$100 before app nodes; a $100 all-in budget is not realistic for this stack).
+**Phase 2** — shutdown · restore
 
-| Layer | Cap |
-|-------|-----|
-| EKS nodes | max **2** × `t3.medium` |
-| API / worker HPA | 1–3 / 1–2 replicas (pack onto existing nodes) |
-| RDS | `db.t4g.micro` single-AZ |
-
-| Threshold | Action |
-|-----------|--------|
-| **50%** | Soft scale — EKS `desired=1` (+ email) |
-| **70%** | Hard lock — EKS `desired=1`, `max=1` (cannot grow) |
-| **80%** | Shutoff — EKS → 0, delete Redis, stop RDS |
-
-Implemented in `infrastructure/terraform/modules/cost_guardrails/` (AWS Budgets → SNS → Lambda).
-
-```hcl
-budget_limit_usd    = 250
-budget_alert_emails = ["you@example.com"]
-```
-
-Budgets report with a delay (hours). Object storage and Cognito data are retained on shutoff.
+**Phase 3** — live resource-scaling (dynamic)
 
 ---
 
