@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -9,24 +9,79 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
 import { colors } from '../../src/constants/theme';
-import { api } from '../../src/lib/api';
+import { api, SAMPLE_UPLOAD_ASPECT } from '../../src/lib/api';
+
+type ModerationHealth = {
+  enabled: boolean;
+  engine?: string;
+  mode?: string;
+  status?: string;
+  detail?: string;
+  pipeline?: string[];
+  detects?: string[];
+  worker?: { status?: string; model_ready?: boolean; error?: string } | null;
+};
+
+function previewBoxWidth(screenWidth: number) {
+  const content = screenWidth - 40;
+  if (screenWidth >= 1100) return Math.min(content, 520);
+  if (screenWidth >= 800) return Math.min(content, 460);
+  if (screenWidth >= 600) return Math.min(content, 400);
+  return content;
+}
+
+function statusColor(status?: string) {
+  if (status === 'ready') return colors.success;
+  if (status === 'unreachable' || status === 'disabled') return colors.danger;
+  return colors.accent;
+}
 
 export default function UploadScreen() {
+  const { width: screenWidth } = useWindowDimensions();
+  const boxWidth = previewBoxWidth(screenWidth);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [engine, setEngine] = useState<ModerationHealth | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      api
+        .getModerationHealth()
+        .then((h) => {
+          if (active) setEngine(h);
+        })
+        .catch(() => {
+          if (active) {
+            setEngine({
+              enabled: false,
+              engine: 'YOLOv8',
+              mode: 'off',
+              status: 'unreachable',
+              detail: 'Cannot reach moderation API.',
+            });
+          }
+        });
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      quality: 0.85,
+      quality: 1,
+      allowsEditing: false,
     });
     if (!result.canceled && result.assets[0]) {
       setImageUri(result.assets[0].uri);
@@ -45,7 +100,7 @@ export default function UploadScreen() {
     setBusy(true);
     setError(null);
     try {
-      setStatus('Creating recipe…');
+      setStatus('Running YOLO moderation…');
       const moderated = await api.publishRecipe(
         title.trim(),
         description.trim() || undefined,
@@ -56,7 +111,7 @@ export default function UploadScreen() {
         setTitle('');
         setDescription('');
         setImageUri(null);
-        router.push(`/recipe/${moderated.id}`);
+        router.replace('/(tabs)/grid');
       } else if (moderated.status === 'pending_review' || moderated.status === 'processing') {
         setStatus(
           moderated.status === 'processing'
@@ -75,14 +130,36 @@ export default function UploadScreen() {
     }
   };
 
+  const modeLabel =
+    engine?.mode === 'live' ? 'Live worker' : engine?.mode === 'demo' ? 'Demo engine' : 'Offline';
+
   return (
     <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
       <Text style={styles.heading}>Share a recipe</Text>
-      <Text style={styles.sub}>Photos are moderated with YOLO before publishing.</Text>
+      <Text style={styles.sub}>Every photo runs through YOLO before it can publish.</Text>
 
-      <Pressable style={styles.imagePicker} onPress={pickImage}>
+      <View style={styles.engine}>
+        <View style={styles.engineHeader}>
+          <Text style={styles.engineTitle}>{engine?.engine || 'YOLOv8'} moderation</Text>
+          <Text style={[styles.engineBadge, { color: statusColor(engine?.status) }]}>
+            {engine ? `${modeLabel} · ${engine.status || '…'}` : 'Checking…'}
+          </Text>
+        </View>
+        <Text style={styles.engineBody}>
+          {engine?.detail ||
+            'Detects food and cooking objects, scores the frame, then publish / review / reject.'}
+        </Text>
+        {engine?.pipeline?.length ? (
+          <Text style={styles.engineMeta}>Pipeline: {engine.pipeline.join(' → ')}</Text>
+        ) : null}
+        {engine?.detects?.length ? (
+          <Text style={styles.engineMeta}>Looks for: {engine.detects.join(', ')}</Text>
+        ) : null}
+      </View>
+
+      <Pressable style={[styles.imagePicker, { width: boxWidth }]} onPress={pickImage}>
         {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.preview} />
+          <Image source={{ uri: imageUri }} style={styles.preview} resizeMode="cover" />
         ) : (
           <Text style={styles.pickerText}>Tap to choose a photo</Text>
         )}
@@ -117,11 +194,32 @@ export default function UploadScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { padding: 20, backgroundColor: colors.bg },
+  screen: { padding: 20, backgroundColor: colors.bg, paddingBottom: 40 },
   heading: { fontSize: 28, fontWeight: '700', color: colors.ink, letterSpacing: -0.6 },
-  sub: { marginTop: 6, marginBottom: 20, color: colors.muted },
+  sub: { marginTop: 6, marginBottom: 16, color: colors.muted },
+  engine: {
+    marginBottom: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
+  },
+  engineHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  engineTitle: { fontSize: 15, fontWeight: '700', color: colors.ink },
+  engineBadge: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
+  engineBody: { marginTop: 8, fontSize: 14, lineHeight: 20, color: colors.ink },
+  engineMeta: { marginTop: 6, fontSize: 12, lineHeight: 18, color: colors.muted },
   imagePicker: {
-    height: 240,
+    alignSelf: 'center',
+    aspectRatio: SAMPLE_UPLOAD_ASPECT,
     borderRadius: 8,
     backgroundColor: colors.accentSoft,
     borderWidth: 1,

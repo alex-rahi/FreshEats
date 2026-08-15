@@ -84,7 +84,7 @@ export default function RecipeDetailsScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.hero} /> : null}
+      {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.hero} resizeMode="cover" /> : null}
       <Text style={styles.title}>{recipe.title}</Text>
       <Text style={styles.author}>@{recipe.author?.username || 'cook'}</Text>
       {recipe.description ? <Text style={styles.description}>{recipe.description}</Text> : null}

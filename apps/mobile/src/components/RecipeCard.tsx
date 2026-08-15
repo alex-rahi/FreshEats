@@ -28,7 +28,7 @@ export function RecipeCard({ recipe, onPress }: Props) {
     <Pressable onPress={onPress} style={[styles.card, { width: cardWidth }]}>
       <View style={styles.imageWrap}>
         {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.image} />
+          <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" />
         ) : (
           <View style={[styles.image, styles.placeholder]}>
             <Text style={styles.placeholderText}>No image</Text>

@@ -2,6 +2,69 @@ import { API_URL, Comment, isDemoMode, isLocalYoloMode, Profile, Recipe } from '
 import { CDN_URL, getAccessToken, isCognitoMode } from './cognito';
 
 const PLACEHOLDER_TOKEN = 'placeholder-access-token';
+const UPLOAD_MAX_EDGE = 2048;
+const UPLOAD_JPEG_QUALITY = 0.92;
+/** Sample flat-lay framing (~485×297). width / height */
+export const SAMPLE_UPLOAD_ASPECT = 485 / 297;
+
+function sampleCropRect(srcW: number, srcH: number) {
+  const target = SAMPLE_UPLOAD_ASPECT;
+  const src = srcW / srcH;
+  if (src > target) {
+    const cropW = Math.round(srcH * target);
+    return { sx: Math.round((srcW - cropW) / 2), sy: 0, sw: cropW, sh: srcH };
+  }
+  const cropH = Math.round(srcW / target);
+  return { sx: 0, sy: Math.round((srcH - cropH) / 2), sw: srcW, sh: cropH };
+}
+
+/** Center-crop to the sample landscape frame, then encode a sharp JPEG. */
+async function formatImageForUpload(uri: string): Promise<{ blob: Blob; fileName: string; type: string }> {
+  if (typeof document === 'undefined') {
+    const res = await fetch(uri);
+    if (!res.ok) throw new Error('Could not read selected image');
+    const blob = await res.blob();
+    const type = blob.type && blob.type !== 'application/octet-stream' ? blob.type : 'image/jpeg';
+    return {
+      blob,
+      type,
+      fileName: type.includes('png') ? 'recipe.png' : 'recipe.jpg',
+    };
+  }
+
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new window.Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error('Could not decode selected image'));
+    el.src = uri;
+  });
+
+  const srcW = img.naturalWidth || img.width;
+  const srcH = img.naturalHeight || img.height;
+  const { sx, sy, sw, sh } = sampleCropRect(srcW, srcH);
+
+  const scale = Math.min(1, UPLOAD_MAX_EDGE / Math.max(sw, sh));
+  const width = Math.max(1, Math.round(sw * scale));
+  const height = Math.max(1, Math.round(sh * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Could not process image');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, width, height);
+
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error('Could not encode image'))),
+      'image/jpeg',
+      UPLOAD_JPEG_QUALITY,
+    );
+  });
+
+  return { blob, fileName: 'recipe.jpg', type: 'image/jpeg' };
+}
 
 type CreateRecipeResult =
   | Recipe
@@ -62,6 +125,20 @@ class ApiClient {
     return data.items;
   };
 
+  getModerationHealth = () =>
+    this.request<{
+      enabled: boolean;
+      engine?: string;
+      mode?: string;
+      status?: string;
+      detail?: string;
+      pipeline?: string[];
+      detects?: string[];
+      local_yolo?: boolean;
+      placeholder_mode?: boolean;
+      worker?: { status?: string; model_ready?: boolean; error?: string } | null;
+    }>('/moderation/health');
+
   getRecipe = (id: string) => this.request<Recipe>(`/recipes/${id}`);
 
   getUserRecipes = (userId: string) => this.request<Recipe[]>(`/recipes/user/${userId}`);
@@ -83,12 +160,7 @@ class ApiClient {
         (uri.startsWith('blob:') || uri.startsWith('data:') || uri.startsWith('http'));
 
       if (isWebUri) {
-        const res = await fetch(uri);
-        if (!res.ok) throw new Error('Could not read selected image');
-        const blob = await res.blob();
-        const type = blob.type && blob.type !== 'application/octet-stream' ? blob.type : 'image/jpeg';
-        const name = type.includes('png') ? 'recipe.png' : fileName;
-        // Expo web FormData is picky — prefer Blob+filename; fall back to File.
+        const { blob, fileName: name, type } = await formatImageForUpload(uri);
         try {
           form.append('file', blob, name);
         } catch {
@@ -117,20 +189,11 @@ class ApiClient {
   };
 
   uploadToPresignedUrl = async (uploadUrl: string, uri: string) => {
-    let body: Blob | ArrayBuffer;
-    let contentType = 'image/jpeg';
-    if (typeof window !== 'undefined') {
-      const res = await fetch(uri);
-      body = await res.blob();
-      contentType = body.type || contentType;
-    } else {
-      const res = await fetch(uri);
-      body = await res.blob();
-    }
+    const { blob, type } = await formatImageForUpload(uri);
     const put = await fetch(uploadUrl, {
       method: 'PUT',
-      headers: { 'Content-Type': contentType },
-      body,
+      headers: { 'Content-Type': type },
+      body: blob,
     });
     if (!put.ok) {
       throw new Error(`S3 upload failed (${put.status})`);

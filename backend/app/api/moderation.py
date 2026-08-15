@@ -12,13 +12,52 @@ router = APIRouter(prefix="/moderation", tags=["moderation"])
 
 @router.get("/health")
 async def moderation_health():
-    if not settings.use_local_yolo:
-        return {"enabled": False}
-    try:
-        worker = await moderation_client.worker_health()
-        return {"enabled": True, "worker": worker}
-    except Exception as exc:
-        return {"enabled": True, "worker": {"status": "unreachable", "error": str(exc)}}
+    """Status of the YOLO moderation engine for the upload UI."""
+    base = {
+        "engine": "YOLOv8",
+        "pipeline": ["upload", "detect", "score", "publish | review | reject"],
+        "detects": [
+            "food",
+            "dish",
+            "bowl",
+            "utensils",
+            "produce",
+            "dining table",
+        ],
+        "placeholder_mode": settings.use_placeholders,
+        "local_yolo": settings.use_local_yolo,
+    }
+
+    if settings.use_local_yolo:
+        try:
+            worker = await moderation_client.worker_health()
+            return {
+                **base,
+                "enabled": True,
+                "mode": "live",
+                "status": "ready" if worker.get("model_ready") or worker.get("status") == "ok" else "starting",
+                "worker": worker,
+            }
+        except Exception as exc:
+            return {
+                **base,
+                "enabled": True,
+                "mode": "live",
+                "status": "unreachable",
+                "worker": {"status": "unreachable", "error": str(exc)},
+            }
+
+    if settings.use_placeholders:
+        return {
+            **base,
+            "enabled": True,
+            "mode": "demo",
+            "status": "ready",
+            "detail": "Demo path auto-publishes food uploads; live YOLO worker optional on :8001.",
+            "worker": None,
+        }
+
+    return {**base, "enabled": False, "mode": "off", "status": "disabled", "worker": None}
 
 
 @router.post("/recipes/{recipe_id}/upload", response_model=RecipeResponse)
