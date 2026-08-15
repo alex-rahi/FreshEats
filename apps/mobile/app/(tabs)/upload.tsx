@@ -56,7 +56,7 @@ export default function UploadScreen() {
         setTitle('');
         setDescription('');
         setImageUri(null);
-        router.push(`/recipe/${moderated.id}`);
+        router.replace('/(tabs)/grid');
       } else if (moderated.status === 'pending_review' || moderated.status === 'processing') {
         setStatus(
           moderated.status === 'processing'
