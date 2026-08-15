@@ -160,7 +160,6 @@ resource "aws_lambda_function" "cutoff" {
       EKS_CLUSTER_NAME  = var.eks_cluster_name
       RDS_INSTANCE_ID   = var.rds_instance_id
       REDIS_CLUSTER_ID  = var.redis_cluster_id
-      AWS_REGION        = var.aws_region
       ALERT_THRESHOLD   = tostring(var.alert_threshold)
       SCALE_THRESHOLD   = tostring(var.scale_threshold)
       SHUTOFF_THRESHOLD = tostring(var.shutoff_threshold)

@@ -35,6 +35,11 @@ resource "aws_cognito_user_pool" "this" {
     required            = false
     mutable             = true
   }
+
+  # Cognito rejects schema changes after create; ignore provider noise.
+  lifecycle {
+    ignore_changes = [schema]
+  }
 }
 
 resource "aws_cognito_user_pool_client" "mobile" {

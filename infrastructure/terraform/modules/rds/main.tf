@@ -15,6 +15,17 @@ variable "allocated_storage" {
   default = 20
 }
 
+variable "max_allocated_storage" {
+  type    = number
+  default = 50
+}
+
+variable "backup_retention_period" {
+  type        = number
+  default     = 3
+  description = "Set 0 for Free Tier accounts that reject multi-day retention"
+}
+
 resource "random_password" "db" {
   length  = 32
   special = false
@@ -45,7 +56,7 @@ resource "aws_db_instance" "this" {
   engine_version             = "16"
   instance_class             = var.instance_class
   allocated_storage          = var.allocated_storage
-  max_allocated_storage      = 50
+  max_allocated_storage      = var.max_allocated_storage
   db_name                    = "fresheats"
   username                   = "fresheats"
   password                   = random_password.db.result
@@ -56,7 +67,7 @@ resource "aws_db_instance" "this" {
   storage_encrypted          = true
   skip_final_snapshot        = true
   deletion_protection        = false
-  backup_retention_period    = 3
+  backup_retention_period    = var.backup_retention_period
   auto_minor_version_upgrade = true
   tags                       = { Name = "${var.name}-postgres" }
 }

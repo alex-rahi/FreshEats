@@ -8,6 +8,15 @@ budget_alert_emails = [
   # "you@example.com"
 ]
 
+# Free Tier–safe sizing (override for paid accounts)
+# eks_node_instance_types     = ["t3.micro"]
+# eks_desired_size            = 1
+# eks_min_size                = 1
+# eks_max_size                = 2
+# rds_instance_class          = "db.t3.micro"
+# rds_backup_retention_period = 0
+# rds_max_allocated_storage   = 20
+
 # Progressive spend control (stay under shutoff):
 # 50% soft scale → desired=1
 # 70% hard lock → desired=1, max=1

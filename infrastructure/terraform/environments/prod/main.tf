@@ -83,6 +83,43 @@ variable "cost_guardrails_dry_run" {
   description = "Plan-only cost cutoff Lambda (no EKS/RDS/Redis mutations)"
 }
 
+variable "eks_node_instance_types" {
+  type        = list(string)
+  default     = ["t3.medium"]
+  description = "EKS node instance types (use Free Tier–eligible types on Free Tier accounts)"
+}
+
+variable "eks_desired_size" {
+  type    = number
+  default = 2
+}
+
+variable "eks_min_size" {
+  type    = number
+  default = 1
+}
+
+variable "eks_max_size" {
+  type    = number
+  default = 2
+}
+
+variable "rds_instance_class" {
+  type    = string
+  default = "db.t4g.micro"
+}
+
+variable "rds_backup_retention_period" {
+  type        = number
+  default     = 3
+  description = "Use 0 on Free Tier accounts (AWS Free Tier often blocks retention > 0/1)"
+}
+
+variable "rds_max_allocated_storage" {
+  type    = number
+  default = 50
+}
+
 data "aws_availability_zones" "available" {
   state = "available"
 }
@@ -98,16 +135,23 @@ module "network" {
 }
 
 module "eks" {
-  source     = "../../modules/eks"
-  name       = var.name
-  subnet_ids = concat(module.network.private_subnet_ids, module.network.public_subnet_ids)
+  source               = "../../modules/eks"
+  name                 = var.name
+  subnet_ids           = concat(module.network.private_subnet_ids, module.network.public_subnet_ids)
+  node_instance_types  = var.eks_node_instance_types
+  desired_size         = var.eks_desired_size
+  min_size             = var.eks_min_size
+  max_size             = var.eks_max_size
 }
 
 module "rds" {
-  source             = "../../modules/rds"
-  name               = var.name
-  subnet_ids         = module.network.private_subnet_ids
-  security_group_ids = [module.network.rds_sg_id]
+  source                  = "../../modules/rds"
+  name                    = var.name
+  subnet_ids              = module.network.private_subnet_ids
+  security_group_ids      = [module.network.rds_sg_id]
+  instance_class          = var.rds_instance_class
+  backup_retention_period = var.rds_backup_retention_period
+  max_allocated_storage   = var.rds_max_allocated_storage
 }
 
 module "s3" {
