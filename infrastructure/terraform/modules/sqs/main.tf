@@ -16,4 +16,6 @@ resource "aws_sqs_queue" "moderation" {
 
 output "queue_url" { value = aws_sqs_queue.moderation.url }
 output "queue_arn" { value = aws_sqs_queue.moderation.arn }
+output "queue_name" { value = aws_sqs_queue.moderation.name }
 output "dlq_url" { value = aws_sqs_queue.dlq.url }
+output "dlq_name" { value = aws_sqs_queue.dlq.name }

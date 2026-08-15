@@ -169,6 +169,26 @@ module "cost_guardrails" {
   dry_run           = var.cost_guardrails_dry_run
 }
 
+module "observability" {
+  source                         = "../../modules/observability"
+  name                           = var.name
+  aws_region                     = var.aws_region
+  eks_cluster_name               = module.eks.cluster_name
+  eks_node_group_name            = module.eks.node_group_name
+  rds_instance_id                = module.rds.instance_id
+  redis_cluster_id               = module.elasticache.cluster_id
+  sqs_queue_name                 = module.sqs.queue_name
+  sqs_dlq_name                   = module.sqs.dlq_name
+  s3_raw_bucket                  = module.s3.raw_bucket
+  s3_recipes_bucket              = module.s3.recipes_bucket
+  cloudfront_distribution_id     = module.cdn.distribution_id
+  cognito_user_pool_id           = module.cognito.user_pool_id
+  cognito_client_id              = module.cognito.client_id
+  nat_gateway_id                 = module.network.nat_gateway_id
+  cutoff_lambda_name             = module.cost_guardrails.cutoff_lambda_name
+  cost_guardrails_dashboard_name = module.cost_guardrails.cost_guardrails_dashboard_name
+}
+
 output "cluster_name" { value = module.eks.cluster_name }
 output "rds_endpoint" { value = module.rds.endpoint }
 output "cognito_user_pool_id" { value = module.cognito.user_pool_id }
@@ -189,6 +209,8 @@ output "deny_spend_policy_arn" { value = module.cost_guardrails.deny_spend_polic
 output "cost_guardrails_dry_run" { value = module.cost_guardrails.dry_run }
 output "cost_guardrails_dashboard_name" { value = module.cost_guardrails.cost_guardrails_dashboard_name }
 output "cost_guardrails_dashboard_url" { value = module.cost_guardrails.cost_guardrails_dashboard_url }
+output "platform_dashboard_name" { value = module.observability.platform_dashboard_name }
+output "platform_dashboard_url" { value = module.observability.platform_dashboard_url }
 output "database_url" {
   value     = module.rds.database_url
   sensitive = true

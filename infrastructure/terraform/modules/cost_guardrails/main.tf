@@ -278,6 +278,7 @@ resource "aws_iam_policy" "deny_spend" {
 output "budget_name" { value = aws_budgets_budget.monthly.name }
 output "sns_topic_arn" { value = aws_sns_topic.budget.arn }
 output "cutoff_lambda_arn" { value = aws_lambda_function.cutoff.arn }
+output "cutoff_lambda_name" { value = aws_lambda_function.cutoff.function_name }
 output "deny_spend_policy_arn" { value = aws_iam_policy.deny_spend.arn }
 output "budget_limit_usd" { value = var.budget_limit_usd }
 output "alert_threshold" { value = var.alert_threshold }

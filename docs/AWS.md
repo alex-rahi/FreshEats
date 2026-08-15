@@ -26,8 +26,22 @@ Admin (Next.js on EKS) ──X-Admin-Secret──▶ FastAPI
 | Secrets | Secrets Manager + K8s Secret |
 | IaC | Terraform under `infrastructure/terraform/` |
 | Cost guardrails | AWS Budgets ($250 default) → SNS → Lambda progressive scale/shutoff |
+| Observability | CloudWatch dashboards: `fresheats-platform` (all services) + `fresheats-cost-guardrails` |
 
-## Cost envelope (stay under budget)
+## CloudWatch dashboards
+
+| Dashboard | Purpose |
+|-----------|---------|
+| **`fresheats-platform`** | Platform overview: EKS, RDS, Redis, SQS (+ DLQ), S3, CloudFront, Cognito, NAT, cost-cutoff Lambda |
+| **`fresheats-cost-guardrails`** | Budget phases, cutoff Lambda logs, soft-scale / lock / shutoff |
+
+```bash
+cd infrastructure/terraform/environments/prod
+terraform output -raw platform_dashboard_url
+terraform output -raw cost_guardrails_dashboard_url
+```
+
+Or open: CloudWatch → Dashboards → `fresheats-platform`
 
 Steady-state is sized so normal HPA scaling **cannot** explode spend past the node hard-cap:
 
