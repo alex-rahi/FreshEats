@@ -160,7 +160,6 @@ resource "aws_lambda_function" "cutoff" {
       EKS_CLUSTER_NAME  = var.eks_cluster_name
       RDS_INSTANCE_ID   = var.rds_instance_id
       REDIS_CLUSTER_ID  = var.redis_cluster_id
-      AWS_REGION        = var.aws_region
       ALERT_THRESHOLD   = tostring(var.alert_threshold)
       SCALE_THRESHOLD   = tostring(var.scale_threshold)
       SHUTOFF_THRESHOLD = tostring(var.shutoff_threshold)
@@ -278,6 +277,7 @@ resource "aws_iam_policy" "deny_spend" {
 output "budget_name" { value = aws_budgets_budget.monthly.name }
 output "sns_topic_arn" { value = aws_sns_topic.budget.arn }
 output "cutoff_lambda_arn" { value = aws_lambda_function.cutoff.arn }
+output "cutoff_lambda_name" { value = aws_lambda_function.cutoff.function_name }
 output "deny_spend_policy_arn" { value = aws_iam_policy.deny_spend.arn }
 output "budget_limit_usd" { value = var.budget_limit_usd }
 output "alert_threshold" { value = var.alert_threshold }

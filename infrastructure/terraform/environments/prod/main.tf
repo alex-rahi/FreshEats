@@ -83,6 +83,43 @@ variable "cost_guardrails_dry_run" {
   description = "Plan-only cost cutoff Lambda (no EKS/RDS/Redis mutations)"
 }
 
+variable "eks_node_instance_types" {
+  type        = list(string)
+  default     = ["t3.medium"]
+  description = "EKS node instance types (use Free Tier–eligible types on Free Tier accounts)"
+}
+
+variable "eks_desired_size" {
+  type    = number
+  default = 2
+}
+
+variable "eks_min_size" {
+  type    = number
+  default = 1
+}
+
+variable "eks_max_size" {
+  type    = number
+  default = 2
+}
+
+variable "rds_instance_class" {
+  type    = string
+  default = "db.t4g.micro"
+}
+
+variable "rds_backup_retention_period" {
+  type        = number
+  default     = 3
+  description = "Use 0 on Free Tier accounts (AWS Free Tier often blocks retention > 0/1)"
+}
+
+variable "rds_max_allocated_storage" {
+  type    = number
+  default = 50
+}
+
 data "aws_availability_zones" "available" {
   state = "available"
 }
@@ -98,16 +135,23 @@ module "network" {
 }
 
 module "eks" {
-  source     = "../../modules/eks"
-  name       = var.name
-  subnet_ids = concat(module.network.private_subnet_ids, module.network.public_subnet_ids)
+  source               = "../../modules/eks"
+  name                 = var.name
+  subnet_ids           = concat(module.network.private_subnet_ids, module.network.public_subnet_ids)
+  node_instance_types  = var.eks_node_instance_types
+  desired_size         = var.eks_desired_size
+  min_size             = var.eks_min_size
+  max_size             = var.eks_max_size
 }
 
 module "rds" {
-  source             = "../../modules/rds"
-  name               = var.name
-  subnet_ids         = module.network.private_subnet_ids
-  security_group_ids = [module.network.rds_sg_id]
+  source                  = "../../modules/rds"
+  name                    = var.name
+  subnet_ids              = module.network.private_subnet_ids
+  security_group_ids      = [module.network.rds_sg_id]
+  instance_class          = var.rds_instance_class
+  backup_retention_period = var.rds_backup_retention_period
+  max_allocated_storage   = var.rds_max_allocated_storage
 }
 
 module "s3" {
@@ -169,6 +213,26 @@ module "cost_guardrails" {
   dry_run           = var.cost_guardrails_dry_run
 }
 
+module "observability" {
+  source                         = "../../modules/observability"
+  name                           = var.name
+  aws_region                     = var.aws_region
+  eks_cluster_name               = module.eks.cluster_name
+  eks_node_group_name            = module.eks.node_group_name
+  rds_instance_id                = module.rds.instance_id
+  redis_cluster_id               = module.elasticache.cluster_id
+  sqs_queue_name                 = module.sqs.queue_name
+  sqs_dlq_name                   = module.sqs.dlq_name
+  s3_raw_bucket                  = module.s3.raw_bucket
+  s3_recipes_bucket              = module.s3.recipes_bucket
+  cloudfront_distribution_id     = module.cdn.distribution_id
+  cognito_user_pool_id           = module.cognito.user_pool_id
+  cognito_client_id              = module.cognito.client_id
+  nat_gateway_id                 = module.network.nat_gateway_id
+  cutoff_lambda_name             = module.cost_guardrails.cutoff_lambda_name
+  cost_guardrails_dashboard_name = module.cost_guardrails.cost_guardrails_dashboard_name
+}
+
 output "cluster_name" { value = module.eks.cluster_name }
 output "rds_endpoint" { value = module.rds.endpoint }
 output "cognito_user_pool_id" { value = module.cognito.user_pool_id }
@@ -189,6 +253,8 @@ output "deny_spend_policy_arn" { value = module.cost_guardrails.deny_spend_polic
 output "cost_guardrails_dry_run" { value = module.cost_guardrails.dry_run }
 output "cost_guardrails_dashboard_name" { value = module.cost_guardrails.cost_guardrails_dashboard_name }
 output "cost_guardrails_dashboard_url" { value = module.cost_guardrails.cost_guardrails_dashboard_url }
+output "platform_dashboard_name" { value = module.observability.platform_dashboard_name }
+output "platform_dashboard_url" { value = module.observability.platform_dashboard_url }
 output "database_url" {
   value     = module.rds.database_url
   sensitive = true
