@@ -21,7 +21,7 @@ PLACEHOLDER_PROFILE = UserProfile(
     created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
 )
 
-_IMAGE = "https://images.unsplash.com/photo-{id}?auto=format&fit=crop&w=800&q=80"
+_IMAGE = "https://images.unsplash.com/photo-{id}?auto=format&fit=crop&w=1600&q=90"
 
 PLACEHOLDER_RECIPES: list[RecipeResponse] = [
     RecipeResponse(

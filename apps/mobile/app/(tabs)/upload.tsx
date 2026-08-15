@@ -9,13 +9,24 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
 import { colors } from '../../src/constants/theme';
-import { api } from '../../src/lib/api';
+import { api, SAMPLE_UPLOAD_ASPECT } from '../../src/lib/api';
+
+function previewBoxWidth(screenWidth: number) {
+  const content = screenWidth - 40;
+  if (screenWidth >= 1100) return Math.min(content, 520);
+  if (screenWidth >= 800) return Math.min(content, 460);
+  if (screenWidth >= 600) return Math.min(content, 400);
+  return content;
+}
 
 export default function UploadScreen() {
+  const { width: screenWidth } = useWindowDimensions();
+  const boxWidth = previewBoxWidth(screenWidth);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -26,7 +37,8 @@ export default function UploadScreen() {
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      quality: 0.85,
+      quality: 1,
+      allowsEditing: false,
     });
     if (!result.canceled && result.assets[0]) {
       setImageUri(result.assets[0].uri);
@@ -80,9 +92,9 @@ export default function UploadScreen() {
       <Text style={styles.heading}>Share a recipe</Text>
       <Text style={styles.sub}>Photos are moderated with YOLO before publishing.</Text>
 
-      <Pressable style={styles.imagePicker} onPress={pickImage}>
+      <Pressable style={[styles.imagePicker, { width: boxWidth }]} onPress={pickImage}>
         {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.preview} />
+          <Image source={{ uri: imageUri }} style={styles.preview} resizeMode="cover" />
         ) : (
           <Text style={styles.pickerText}>Tap to choose a photo</Text>
         )}
@@ -121,7 +133,8 @@ const styles = StyleSheet.create({
   heading: { fontSize: 28, fontWeight: '700', color: colors.ink, letterSpacing: -0.6 },
   sub: { marginTop: 6, marginBottom: 20, color: colors.muted },
   imagePicker: {
-    height: 240,
+    alignSelf: 'center',
+    aspectRatio: SAMPLE_UPLOAD_ASPECT,
     borderRadius: 8,
     backgroundColor: colors.accentSoft,
     borderWidth: 1,
