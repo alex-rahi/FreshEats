@@ -29,7 +29,12 @@ class ApiClient {
     }
     if (token) headers.Authorization = `Bearer ${token}`;
 
-    const res = await fetch(`${API_URL}/api/v1${path}`, { ...options, headers });
+    let res: Response;
+    try {
+      res = await fetch(`${API_URL}/api/v1${path}`, { ...options, headers });
+    } catch {
+      throw new Error(`Cannot reach API at ${API_URL}. Is the backend running on port 8000?`);
+    }
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
       const detail = err.detail;
@@ -72,16 +77,38 @@ class ApiClient {
 
   uploadRecipeImage = async (recipeId: string, uri: string, fileName = 'recipe.jpg') => {
     const form = new FormData();
-    if (typeof window !== 'undefined' && (uri.startsWith('blob:') || uri.startsWith('data:'))) {
-      const blob = await fetch(uri).then((r) => r.blob());
-      form.append('file', blob, fileName);
-    } else {
-      form.append('file', {
-        uri,
-        name: fileName,
-        type: 'image/jpeg',
-      } as any);
+    try {
+      const isWebUri =
+        typeof window !== 'undefined' &&
+        (uri.startsWith('blob:') || uri.startsWith('data:') || uri.startsWith('http'));
+
+      if (isWebUri) {
+        const res = await fetch(uri);
+        if (!res.ok) throw new Error('Could not read selected image');
+        const blob = await res.blob();
+        const type = blob.type && blob.type !== 'application/octet-stream' ? blob.type : 'image/jpeg';
+        const name = type.includes('png') ? 'recipe.png' : fileName;
+        // Expo web FormData is picky — prefer Blob+filename; fall back to File.
+        try {
+          form.append('file', blob, name);
+        } catch {
+          form.append('file', new File([blob], name, { type }));
+        }
+      } else {
+        form.append('file', {
+          uri,
+          name: fileName,
+          type: 'image/jpeg',
+        } as any);
+      }
+    } catch (e: any) {
+      const msg = e?.message || String(e);
+      if (/Load failed|Failed to fetch|NetworkError/i.test(msg)) {
+        throw new Error(`Cannot reach API at ${API_URL}. Is the backend running on port 8000?`);
+      }
+      throw new Error(msg || 'Could not prepare image for upload');
     }
+
     return this.request<Recipe>(`/moderation/recipes/${recipeId}/upload`, {
       method: 'POST',
       body: form,

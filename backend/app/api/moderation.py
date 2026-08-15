@@ -35,9 +35,9 @@ async def upload_for_moderation(
         raise HTTPException(404, "Recipe not found")
 
     storage_path = recipe.images[0].storage_path if recipe.images else f"{user_id}/{recipe_id}.jpg"
-    await local_storage.save_upload_file(recipe_id, storage_path, file)
+    storage_path = await local_storage.save_upload_file(recipe_id, storage_path, file)
     url = local_storage.public_file_url(storage_path)
-    local_store.set_image_url(recipe_id, url)
+    local_store.set_image_url(recipe_id, url, storage_path=storage_path)
     return local_store.mark_processing(recipe_id)
 
 

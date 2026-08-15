@@ -46,14 +46,11 @@ async def list_recipes(
     limit: int = Query(30, ge=1, le=100),
     viewer_id: UUID | None = Depends(get_optional_user_id),
 ):
-    if settings.use_local_yolo:
+    if settings.use_local_yolo or settings.use_placeholders:
         items = local_store.list_published(viewer_id)
         existing_ids = {r.id for r in items}
         seeded = [r for r in PLACEHOLDER_RECIPES if r.id not in existing_ids]
         return RecipeGridResponse(items=(items + seeded)[:limit], next_cursor=None)
-
-    if settings.use_placeholders:
-        return RecipeGridResponse(items=PLACEHOLDER_RECIPES[:limit], next_cursor=None)
 
     if settings.uses_db:
         items = await recipe_service.list_published(viewer_id, limit)

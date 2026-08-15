@@ -98,12 +98,16 @@ def mark_processing(recipe_id: UUID) -> RecipeResponse:
     return _to_response(recipe)
 
 
-def set_image_url(recipe_id: UUID, url: str) -> None:
+def set_image_url(recipe_id: UUID, url: str, storage_path: str | None = None) -> None:
     recipe = _local_recipes[recipe_id]
     recipe["image_url"] = url
+    if storage_path:
+        recipe["storage_path"] = storage_path
     images = recipe.get("images") or []
     if images:
         images[0].public_url = url
+        if storage_path:
+            images[0].storage_path = storage_path
 
 
 def apply_moderation_result(recipe_id: UUID, result: dict) -> RecipeResponse:

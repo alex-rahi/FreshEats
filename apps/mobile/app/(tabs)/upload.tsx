@@ -39,7 +39,7 @@ export default function UploadScreen() {
       return;
     }
     if (!imageUri) {
-      setError('Choose a recipe photo');
+      setError('Choose a recipe photo first (tap the image area above)');
       return;
     }
     setBusy(true);
@@ -67,6 +67,7 @@ export default function UploadScreen() {
         setStatus(`Status: ${moderated.status}`);
       }
     } catch (e: any) {
+      console.error('Upload failed', e);
       setError(e.message || 'Upload failed');
       setStatus(null);
     } finally {
