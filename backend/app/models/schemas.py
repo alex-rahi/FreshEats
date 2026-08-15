@@ -58,6 +58,8 @@ class RecipeResponse(BaseModel):
     image_url: str | None = None
     images: list[RecipeImage] = Field(default_factory=list)
     detection_labels: list[str] = Field(default_factory=list)
+    moderation_rules: list[dict] = Field(default_factory=list)
+    what_happens: str | None = None
     author: UserProfile | None = None
     created_at: datetime | None = None
 

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from app.auth.jwt import get_current_user_id
 from app.config import settings
 from app.models.schemas import RecipeResponse
-from app.services import local_storage, local_store, moderation_client
+from app.services import demo_moderation, local_storage, local_store, moderation_client
 
 router = APIRouter(prefix="/moderation", tags=["moderation"])
 
@@ -15,15 +15,15 @@ async def moderation_health():
     """Status of the YOLO moderation engine for the upload UI."""
     base = {
         "engine": "YOLOv8",
-        "pipeline": ["upload", "detect", "score", "publish | review | reject"],
+        "policy": "food_only",
+        "pipeline": ["upload", "detect", "food-only score", "publish | reject"],
         "detects": [
             "food",
             "dish",
-            "bowl",
-            "utensils",
             "produce",
-            "dining table",
+            "plated meals",
         ],
+        "rules": demo_moderation.RULE_CATALOG,
         "placeholder_mode": settings.use_placeholders,
         "local_yolo": settings.use_local_yolo,
     }
@@ -53,7 +53,7 @@ async def moderation_health():
             "enabled": True,
             "mode": "demo",
             "status": "ready",
-            "detail": "Demo path auto-publishes food uploads; live YOLO worker optional on :8001.",
+            "detail": "Food only — YOLO publishes recipe food photos; everything else is rejected.",
             "worker": None,
         }
 
@@ -88,17 +88,16 @@ async def run_local_moderation(recipe_id: UUID, user_id: UUID = Depends(get_curr
 
     storage_path = recipe.images[0].storage_path if recipe.images else ""
 
-    # Placeholder demo without YOLO: auto-publish
+    # Placeholder demo without live YOLO: heuristic detections + real rule outcomes
     if settings.use_placeholders and not settings.use_local_yolo:
-        result = {
-            "status": "published",
-            "moderation_decision": "publish",
-            "detection_labels": ["food"],
-            "detections": [],
-            "moderation_scores": [],
-            "rules": [],
-            "moderation_reason": "Demo mode auto-publish",
-        }
+        if not local_storage.upload_exists(storage_path):
+            raise HTTPException(400, "Upload image before running moderation")
+        from pathlib import Path
+
+        from app.config import settings as cfg
+
+        path = Path(cfg.uploads_dir) / storage_path
+        result = demo_moderation.analyze_image_file(path)
         return local_store.apply_moderation_result(recipe_id, result)
 
     if not settings.use_local_yolo:
@@ -112,12 +111,8 @@ async def run_local_moderation(recipe_id: UUID, user_id: UUID = Depends(get_curr
     except Exception as exc:
         raise HTTPException(502, f"YOLO worker failed: {exc}") from exc
 
+    # Always persist outcome (including rejects) so the UI can show rule results.
+    saved = local_store.apply_moderation_result(recipe_id, result)
     if result.get("status") == "rejected":
-        local_store.apply_moderation_result(recipe_id, result)
-        raise HTTPException(422, detail={
-            "message": "Image rejected by moderation",
-            "reason": result.get("moderation_decision"),
-            "labels": result.get("detection_labels", []),
-        })
-
-    return local_store.apply_moderation_result(recipe_id, result)
+        return saved
+    return saved

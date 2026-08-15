@@ -13,7 +13,8 @@ import {
   View,
 } from 'react-native';
 
-import { colors } from '../../src/constants/theme';
+import { ModerationRulesPanel } from '../../src/components/ModerationRulesPanel';
+import { colors, ModerationRule, Recipe } from '../../src/constants/theme';
 import { api, SAMPLE_UPLOAD_ASPECT } from '../../src/lib/api';
 
 type ModerationHealth = {
@@ -24,6 +25,7 @@ type ModerationHealth = {
   detail?: string;
   pipeline?: string[];
   detects?: string[];
+  rules?: ModerationRule[];
   worker?: { status?: string; model_ready?: boolean; error?: string } | null;
 };
 
@@ -51,6 +53,7 @@ export default function UploadScreen() {
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [engine, setEngine] = useState<ModerationHealth | null>(null);
+  const [lastResult, setLastResult] = useState<Recipe | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -85,6 +88,7 @@ export default function UploadScreen() {
     });
     if (!result.canceled && result.assets[0]) {
       setImageUri(result.assets[0].uri);
+      setLastResult(null);
     }
   };
 
@@ -99,6 +103,7 @@ export default function UploadScreen() {
     }
     setBusy(true);
     setError(null);
+    setLastResult(null);
     try {
       setStatus('Running YOLO moderation…');
       const moderated = await api.publishRecipe(
@@ -106,17 +111,21 @@ export default function UploadScreen() {
         description.trim() || undefined,
         imageUri,
       );
+      setLastResult(moderated);
+
       if (moderated.status === 'published') {
         setStatus('Published!');
         setTitle('');
         setDescription('');
         setImageUri(null);
         router.replace('/(tabs)/grid');
+      } else if (moderated.status === 'rejected') {
+        setStatus('Rejected — food only. Not published.');
       } else if (moderated.status === 'pending_review' || moderated.status === 'processing') {
         setStatus(
           moderated.status === 'processing'
             ? 'Uploaded — YOLO moderation queued.'
-            : 'Sent to manual review — check the admin dashboard.',
+            : 'Held for manual review — not on the grid yet.',
         );
       } else {
         setStatus(`Status: ${moderated.status}`);
@@ -133,21 +142,26 @@ export default function UploadScreen() {
   const modeLabel =
     engine?.mode === 'live' ? 'Live worker' : engine?.mode === 'demo' ? 'Demo engine' : 'Offline';
 
+  const catalogRules: ModerationRule[] = (engine?.rules || []).map((r) => ({
+    ...r,
+    outcome: 'catalog',
+  }));
+
   return (
     <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
       <Text style={styles.heading}>Share a recipe</Text>
-      <Text style={styles.sub}>Every photo runs through YOLO before it can publish.</Text>
+      <Text style={styles.sub}>YOLO moderation is food only — non-food photos are rejected.</Text>
 
       <View style={styles.engine}>
         <View style={styles.engineHeader}>
-          <Text style={styles.engineTitle}>{engine?.engine || 'YOLOv8'} moderation</Text>
+          <Text style={styles.engineTitle}>{engine?.engine || 'YOLOv8'} · Food only</Text>
           <Text style={[styles.engineBadge, { color: statusColor(engine?.status) }]}>
             {engine ? `${modeLabel} · ${engine.status || '…'}` : 'Checking…'}
           </Text>
         </View>
         <Text style={styles.engineBody}>
           {engine?.detail ||
-            'Detects food and cooking objects, scores the frame, then publish / review / reject.'}
+            'Food only: detect plated food or ingredients, then publish or reject.'}
         </Text>
         {engine?.pipeline?.length ? (
           <Text style={styles.engineMeta}>Pipeline: {engine.pipeline.join(' → ')}</Text>
@@ -157,6 +171,14 @@ export default function UploadScreen() {
         ) : null}
       </View>
 
+      {catalogRules.length ? (
+        <ModerationRulesPanel
+          compact
+          rules={catalogRules}
+          whatHappens="Food only: if YOLO does not see food, the post is rejected and never appears on the grid."
+        />
+      ) : null}
+
       <Pressable style={[styles.imagePicker, { width: boxWidth }]} onPress={pickImage}>
         {imageUri ? (
           <Image source={{ uri: imageUri }} style={styles.preview} resizeMode="cover" />
@@ -164,6 +186,10 @@ export default function UploadScreen() {
           <Text style={styles.pickerText}>Tap to choose a photo</Text>
         )}
       </Pressable>
+
+      <Text style={styles.hint}>
+        Try failing samples in demo-fail-images/: fail-cellphone.jpg, fail-car.jpg, fail-laptop.jpg, fail-blank.jpg
+      </Text>
 
       <Text style={styles.label}>Title</Text>
       <TextInput
@@ -186,6 +212,17 @@ export default function UploadScreen() {
       {status ? <Text style={styles.status}>{status}</Text> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
+      {lastResult && lastResult.status !== 'published' ? (
+        <ModerationRulesPanel
+          compact
+          rules={lastResult.moderation_rules}
+          decision={lastResult.moderation_decision}
+          reason={lastResult.moderation_reason}
+          whatHappens={lastResult.what_happens}
+          labels={lastResult.detection_labels}
+        />
+      ) : null}
+
       <Pressable style={styles.button} onPress={submit} disabled={busy}>
         {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Upload & moderate</Text>}
       </Pressable>
@@ -198,7 +235,7 @@ const styles = StyleSheet.create({
   heading: { fontSize: 28, fontWeight: '700', color: colors.ink, letterSpacing: -0.6 },
   sub: { marginTop: 6, marginBottom: 16, color: colors.muted },
   engine: {
-    marginBottom: 20,
+    marginBottom: 16,
     paddingVertical: 14,
     paddingHorizontal: 14,
     borderRadius: 8,
@@ -230,6 +267,7 @@ const styles = StyleSheet.create({
   },
   preview: { width: '100%', height: '100%' },
   pickerText: { color: colors.accent, fontWeight: '600' },
+  hint: { marginTop: 10, marginBottom: 4, fontSize: 12, color: colors.muted, lineHeight: 17 },
   label: { marginTop: 16, marginBottom: 6, fontSize: 13, color: colors.muted },
   input: {
     backgroundColor: colors.surface,

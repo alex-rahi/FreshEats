@@ -13,6 +13,7 @@ import {
 
 import { useAuth } from '../../src/context/AuthContext';
 import { colors, Comment, Recipe } from '../../src/constants/theme';
+import { ModerationRulesPanel } from '../../src/components/ModerationRulesPanel';
 import { api, mediaUrl } from '../../src/lib/api';
 
 export default function RecipeDetailsScreen() {
@@ -97,6 +98,14 @@ export default function RecipeDetailsScreen() {
         </Pressable>
         <Text style={styles.commentCount}>{recipe.comment_count} comments</Text>
       </View>
+
+      <ModerationRulesPanel
+        rules={recipe.moderation_rules}
+        decision={recipe.moderation_decision}
+        reason={recipe.moderation_reason}
+        whatHappens={recipe.what_happens}
+        labels={recipe.detection_labels}
+      />
 
       <Text style={styles.section}>Comments</Text>
       {comments.map((c) => (

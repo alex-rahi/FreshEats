@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from app.models.schemas import RecipeResponse, UserProfile
+from app.services.demo_moderation import PASS_RULES
 
 PLACEHOLDER_USER_ID = UUID("00000000-0000-4000-8000-000000000001")
 
@@ -23,6 +24,14 @@ PLACEHOLDER_PROFILE = UserProfile(
 
 _IMAGE = "https://images.unsplash.com/photo-{id}?auto=format&fit=crop&w=1600&q=90"
 
+_PASS = {
+    "detection_labels": ["food", "dish"],
+    "moderation_decision": "publish",
+    "moderation_reason": "Food only — YOLO rules passed; publish to grid",
+    "moderation_rules": PASS_RULES,
+    "what_happens": "Published — the post is live on the FreshEats grid.",
+}
+
 PLACEHOLDER_RECIPES: list[RecipeResponse] = [
     RecipeResponse(
         id=UUID("10000000-0000-4000-8000-000000000001"),
@@ -35,6 +44,7 @@ PLACEHOLDER_RECIPES: list[RecipeResponse] = [
         image_url=_IMAGE.format(id="1473093295043-cdd812d0e601"),
         author=UserProfile(id=UUID("00000000-0000-4000-8000-000000000002"), username="maya_cooks", display_name="Maya"),
         created_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
+        **_PASS,
     ),
     RecipeResponse(
         id=UUID("10000000-0000-4000-8000-000000000002"),
@@ -47,6 +57,7 @@ PLACEHOLDER_RECIPES: list[RecipeResponse] = [
         image_url=_IMAGE.format(id="1519708227418-c8fd9a32b7a2"),
         author=UserProfile(id=UUID("00000000-0000-4000-8000-000000000003"), username="chef_leo", display_name="Leo"),
         created_at=datetime(2026, 8, 2, tzinfo=timezone.utc),
+        **_PASS,
     ),
     RecipeResponse(
         id=UUID("10000000-0000-4000-8000-000000000003"),
@@ -59,6 +70,7 @@ PLACEHOLDER_RECIPES: list[RecipeResponse] = [
         image_url=_IMAGE.format(id="1482049016688-2d3e1b311543"),
         author=UserProfile(id=UUID("00000000-0000-4000-8000-000000000004"), username="sourdough_sam", display_name="Sam"),
         created_at=datetime(2026, 8, 3, tzinfo=timezone.utc),
+        **_PASS,
     ),
     RecipeResponse(
         id=UUID("10000000-0000-4000-8000-000000000004"),
@@ -71,6 +83,7 @@ PLACEHOLDER_RECIPES: list[RecipeResponse] = [
         image_url=_IMAGE.format(id="1512621776951-a57141f2eefd"),
         author=UserProfile(id=UUID("00000000-0000-4000-8000-000000000002"), username="maya_cooks", display_name="Maya"),
         created_at=datetime(2026, 8, 4, tzinfo=timezone.utc),
+        **_PASS,
     ),
     RecipeResponse(
         id=UUID("10000000-0000-4000-8000-000000000005"),
@@ -83,6 +96,7 @@ PLACEHOLDER_RECIPES: list[RecipeResponse] = [
         image_url=_IMAGE.format(id="1414235077428-338989a2e8c0"),
         author=UserProfile(id=UUID("00000000-0000-4000-8000-000000000003"), username="chef_leo", display_name="Leo"),
         created_at=datetime(2026, 8, 5, tzinfo=timezone.utc),
+        **_PASS,
     ),
     RecipeResponse(
         id=UUID("10000000-0000-4000-8000-000000000006"),
@@ -95,6 +109,7 @@ PLACEHOLDER_RECIPES: list[RecipeResponse] = [
         image_url=_IMAGE.format(id="1604908176997-125f25cc6f3d"),
         author=PLACEHOLDER_PROFILE,
         created_at=datetime(2026, 8, 6, tzinfo=timezone.utc),
+        **_PASS,
     ),
 ]
 

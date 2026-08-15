@@ -134,6 +134,7 @@ class ApiClient {
       detail?: string;
       pipeline?: string[];
       detects?: string[];
+      rules?: { rule_name: string; description: string; on_fail: string }[];
       local_yolo?: boolean;
       placeholder_mode?: boolean;
       worker?: { status?: string; model_ready?: boolean; error?: string } | null;

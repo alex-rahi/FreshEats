@@ -41,6 +41,11 @@ export function RecipeCard({ recipe, onPress }: Props) {
       <Text style={styles.meta} numberOfLines={1}>
         @{recipe.author?.username || 'cook'} · ♥ {recipe.like_count} · 💬 {recipe.comment_count}
       </Text>
+      {recipe.detection_labels?.length ? (
+        <Text style={styles.labels} numberOfLines={1}>
+          YOLO: {recipe.detection_labels.join(', ')}
+        </Text>
+      ) : null}
     </Pressable>
   );
 }
@@ -77,5 +82,10 @@ const styles = StyleSheet.create({
     marginTop: 3,
     fontSize: 12,
     color: colors.muted,
+  },
+  labels: {
+    marginTop: 3,
+    fontSize: 11,
+    color: colors.accent,
   },
 });

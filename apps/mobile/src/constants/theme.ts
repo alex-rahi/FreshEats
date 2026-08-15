@@ -27,12 +27,23 @@ export function isLocalYoloMode() {
 
 export const PLACEHOLDER_USER_ID = '00000000-0000-4000-8000-000000000001';
 
+export type ModerationRule = {
+  rule_name: string;
+  outcome: string;
+  confidence?: number;
+  details?: Record<string, unknown>;
+  description?: string;
+  on_fail?: string;
+};
+
 export type Recipe = {
   id: string;
   user_id: string;
   title: string;
   description?: string | null;
   status: string;
+  moderation_decision?: string | null;
+  moderation_reason?: string | null;
   like_count: number;
   comment_count: number;
   liked_by_me?: boolean;
@@ -47,6 +58,8 @@ export type Recipe = {
   };
   created_at?: string;
   detection_labels?: string[];
+  moderation_rules?: ModerationRule[];
+  what_happens?: string | null;
 };
 
 export type Comment = {

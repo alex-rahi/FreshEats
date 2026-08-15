@@ -53,6 +53,7 @@ def create_local_recipe(user_id: UUID, title: str, description: str | None) -> R
             RecipeImage(storage_path=storage_path, public_url=None, is_primary=True),
         ],
         "detection_labels": [],
+        "moderation_rules": [],
         "created_at": datetime.now(timezone.utc),
         "storage_path": storage_path,
     }
@@ -80,6 +81,8 @@ def _to_response(recipe: dict, viewer_id: UUID | None = None) -> RecipeResponse:
         image_url=recipe.get("image_url"),
         images=recipe.get("images", []),
         detection_labels=recipe.get("detection_labels", []),
+        moderation_rules=recipe.get("moderation_rules", []),
+        what_happens=recipe.get("what_happens"),
         author=_author(recipe["user_id"]),
         created_at=recipe.get("created_at"),
     )
@@ -116,6 +119,8 @@ def apply_moderation_result(recipe_id: UUID, result: dict) -> RecipeResponse:
     recipe["moderation_decision"] = result.get("moderation_decision", "publish")
     recipe["moderation_reason"] = result.get("moderation_reason")
     recipe["detection_labels"] = result.get("detection_labels", [])
+    recipe["moderation_rules"] = result.get("rules", [])
+    recipe["what_happens"] = result.get("what_happens")
 
     if recipe["status"] == RecipeStatus.PENDING_REVIEW.value:
         review_id = uuid4()

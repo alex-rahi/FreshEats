@@ -27,20 +27,24 @@ class EvaluationContext:
     user_trust_level: int = 50
 
 
-# COCO food + cooking context labels (YOLOv8n)
-FOOD_OBJECTS = {
+# COCO food labels that count as edible / plated food under food-only policy
+FOOD_CORE = {
     "banana", "apple", "sandwich", "orange", "broccoli", "carrot",
-    "hot dog", "pizza", "donut", "cake", "bowl", "bottle", "wine glass",
-    "cup", "fork", "knife", "spoon", "dining table", "food", "dish",
-    "meal", "ingredient",
+    "hot dog", "pizza", "donut", "cake", "food", "dish", "meal", "ingredient",
 }
 
+COOKWARE = {
+    "bowl", "bottle", "wine glass", "cup", "fork", "knife", "spoon", "dining table",
+}
+
+FOOD_OBJECTS = FOOD_CORE | COOKWARE
+
 COOKING_CONTEXT = {
-    "person", "oven", "microwave", "refrigerator", "sink", "bowl",
+    "oven", "microwave", "refrigerator", "sink", "bowl",
     "dining table", "cup", "bottle", "knife", "fork", "spoon",
 }
 
-# Clearly unrelated — reject when dominant and no food present
+# Clearly unrelated — reject when no food present
 UNRELATED_OBJECTS = {
     "car", "truck", "bus", "motorcycle", "airplane", "train", "boat",
     "traffic light", "fire hydrant", "stop sign", "parking meter",
@@ -50,7 +54,7 @@ UNRELATED_OBJECTS = {
     "kite", "baseball bat", "baseball glove", "skateboard", "surfboard",
     "tennis racket", "laptop", "mouse", "remote", "keyboard", "cell phone",
     "book", "clock", "vase", "scissors", "teddy bear", "hair drier",
-    "toothbrush", "tv", "toilet",
+    "toothbrush", "tv", "toilet", "person",
 }
 
 MODERATION_CATEGORIES = {
@@ -87,46 +91,49 @@ def rule_content_moderation(ctx: EvaluationContext) -> RuleResult:
 
 
 def rule_food_detection(ctx: EvaluationContext) -> RuleResult:
-    """Require food/cooking signals; reject clearly unrelated; queue uncertain."""
+    """Food-only policy: require edible/plated food labels; reject everything else."""
     labels = {d["label"].lower() for d in ctx.detections}
     confidences = {d["label"].lower(): d["confidence"] for d in ctx.detections}
 
-    food_hits = labels & FOOD_OBJECTS
+    food_core = labels & FOOD_CORE
+    cookware = labels & COOKWARE
     cooking_hits = labels & COOKING_CONTEXT
     unrelated = labels & UNRELATED_OBJECTS
 
-    if food_hits:
+    if food_core and "person" not in labels:
         return RuleResult(
             "food_detection", Outcome.APPROVE, 0.92,
-            {"food": list(food_hits), "context": list(cooking_hits)},
+            {"food": list(food_core), "context": list(cooking_hits | cookware), "policy": "food_only"},
         )
 
-    if cooking_hits and not unrelated:
-        # Person + utensils / dining table — uncertain food scene
-        max_conf = max((confidences[l] for l in cooking_hits), default=0.5)
-        if max_conf >= 0.7:
-            return RuleResult(
-                "food_detection", Outcome.FLAG_FOR_REVIEW, max_conf,
-                {"reason": "Cooking context without clear food", "detected": list(labels)},
-            )
+    if "person" in labels and not food_core:
+        return RuleResult(
+            "food_detection", Outcome.REJECT, confidences.get("person", 0.8),
+            {"reason": "Food only — person/portrait without food", "detected": list(labels)},
+        )
 
-    if unrelated and not food_hits:
+    if unrelated and not food_core:
         max_unrelated = max((confidences.get(l, 0) for l in unrelated), default=0)
-        if max_unrelated >= 0.65:
-            return RuleResult(
-                "food_detection", Outcome.REJECT, max_unrelated,
-                {"reason": "Unrelated non-food image", "detected": list(unrelated)},
-            )
+        return RuleResult(
+            "food_detection", Outcome.REJECT, max(max_unrelated, 0.7),
+            {"reason": "Food only — non-food object detected", "detected": list(unrelated)},
+        )
+
+    if (cookware or cooking_hits) and not food_core:
+        return RuleResult(
+            "food_detection", Outcome.REJECT, 0.75,
+            {"reason": "Food only — cookware/kitchen context without food", "detected": list(labels)},
+        )
 
     if not labels:
         return RuleResult(
-            "food_detection", Outcome.FLAG_FOR_REVIEW, 0.4,
-            {"reason": "No objects detected — manual review"},
+            "food_detection", Outcome.REJECT, 0.85,
+            {"reason": "Food only — no food detected in image"},
         )
 
     return RuleResult(
-        "food_detection", Outcome.FLAG_FOR_REVIEW, 0.55,
-        {"reason": "Uncertain food relevance", "detected": list(labels)},
+        "food_detection", Outcome.REJECT, 0.8,
+        {"reason": "Food only — image is not clearly food", "detected": list(labels)},
     )
 
 
