@@ -6,30 +6,7 @@ Build a production-style full-stack application named **FreshEats**. FreshEats i
 
 The project is intended to be an interview-ready DevOps, cloud-platform, backend, DevSecOps, and full-stack portfolio project.
 
----
-
-## Current status (read this first)
-
-**Not all features in this document are implemented.**
-
-FreshEats is running in **demo mode** for **Stage 1: private development** only. Treat the sections below as the full product and infrastructure **specification / roadmap**, not a claim that every item is built, tested, or deployed.
-
-### What the demo focuses on
-
-The main feature for demo purposes is:
-
-**YOLO moderation — food content only**
-
-- Uploaded recipe photos are checked before publish
-- Clear food / dish content can publish
-- Non-food images (people, devices, blank frames, unrelated objects, etc.) are rejected
-- Rule outcomes are shown in the upload and recipe UI
-
-Other capabilities in this README (grocery lists, retailer prices, invitation beta, full EKS production path, advertising, etc.) are planned or partial unless explicitly marked implemented elsewhere.
-
----
-
-### Spec / roadmap feature areas
+### Main technical features
 
 - Secure user authentication and authorization
 - Structured recipe and ingredient data
@@ -315,7 +292,7 @@ For images: safely decode, remove metadata, run YOLO for object detection, run a
 
 **YOLO is an object detector.** Do not claim that YOLO independently guarantees content safety. Use separate components for object detection, image-safety classification, OCR, text classification, policy decision-making, and human review.
 
-**Demo mode (private development):** the working demonstration emphasizes **food-only** YOLO moderation for recipe photos. Full multi-classifier / OCR / safety pipelines in this section remain part of the target design.
+Current demo policy emphasizes **food only** publishing for recipe photos.
 
 ---
 
