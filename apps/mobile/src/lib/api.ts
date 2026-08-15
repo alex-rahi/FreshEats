@@ -62,6 +62,20 @@ class ApiClient {
     return data.items;
   };
 
+  getModerationHealth = () =>
+    this.request<{
+      enabled: boolean;
+      engine?: string;
+      mode?: string;
+      status?: string;
+      detail?: string;
+      pipeline?: string[];
+      detects?: string[];
+      local_yolo?: boolean;
+      placeholder_mode?: boolean;
+      worker?: { status?: string; model_ready?: boolean; error?: string } | null;
+    }>('/moderation/health');
+
   getRecipe = (id: string) => this.request<Recipe>(`/recipes/${id}`);
 
   getUserRecipes = (userId: string) => this.request<Recipe[]>(`/recipes/user/${userId}`);
