@@ -4,6 +4,22 @@
 
 **Beta is live:** [https://d1reqap9sj9n0b.cloudfront.net](https://d1reqap9sj9n0b.cloudfront.net)
 
+No local Docker / Compose build is required to use the beta — open the CloudFront URL above.
+
+### Tech stack (live beta)
+
+| Layer | Stack |
+|-------|--------|
+| Client | Expo / React Native / React Native Web, Expo Router, TypeScript |
+| Auth | Amazon Cognito (JWT) |
+| API | FastAPI, Uvicorn, Pydantic, boto3 |
+| Moderation | YOLOv8 (Ultralytics), OpenCV, SQS consumer worker |
+| Data | RDS PostgreSQL, ElastiCache Redis |
+| Storage / CDN | S3, CloudFront (web + media) |
+| Compute | EKS (`fresheats-api`, `fresheats-worker`), ALB, ECR |
+| IaC / ops | Terraform, CloudWatch, AWS Budgets → SNS → cutoff Lambda |
+| Local demo | Docker Compose, MinIO / LocalStack path (optional) |
+
 ## Current status (read this first)
 
 **Not all features in this document are implemented.**
