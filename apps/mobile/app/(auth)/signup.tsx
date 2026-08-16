@@ -128,10 +128,11 @@ export default function SignUpScreen() {
         value={password}
         onChangeText={setPassword}
         style={styles.input}
-        placeholder="At least 8 characters"
+        placeholder="e.g. FreshEats1"
         placeholderTextColor={colors.muted}
         editable={!full}
       />
+      <Text style={styles.hint}>At least 8 characters, with upper, lower, and a number.</Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Pressable
         style={[styles.button, (busy || full) && styles.buttonDisabled]}
@@ -169,6 +170,7 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 13, fontWeight: '600', color: colors.ink },
   meta: { marginBottom: 12, color: colors.muted, fontSize: 13 },
   warn: { marginBottom: 12, color: colors.danger, fontSize: 13 },
+  hint: { marginTop: 6, fontSize: 12, color: colors.muted },
   label: { fontSize: 13, color: colors.muted, marginTop: 8 },
   input: {
     backgroundColor: colors.surface,

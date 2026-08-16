@@ -27,6 +27,10 @@ async def register(body: RegisterBody):
     if "@" not in email:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Valid email required")
 
+    pw_err = signup_capacity.validate_password_policy(body.password)
+    if pw_err:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=pw_err)
+
     already = signup_capacity.ledger_has(email)
     if not status_info["open"] and not already:
         raise HTTPException(
@@ -44,24 +48,20 @@ async def register(body: RegisterBody):
     if use_cognito:
         from botocore.exceptions import ClientError
 
-        created = False
+        before = signup_capacity.count_cognito_users() or 0
         try:
             signup_capacity.create_cognito_user(email, body.password, username)
-            created = True
         except ClientError as e:
-            code = e.response.get("Error", {}).get("Code", "")
-            if code == "UsernameExistsException":
-                pass
-            else:
-                raise HTTPException(
-                    status.HTTP_400_BAD_REQUEST,
-                    detail=e.response.get("Error", {}).get("Message") or str(e),
-                ) from e
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail=e.response.get("Error", {}).get("Message") or str(e),
+            ) from e
         except Exception as e:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
         after = signup_capacity.count_cognito_users()
-        if created and after is not None and after > settings.max_users:
+        # New user pushed past the cap — roll back
+        if after is not None and before < settings.max_users and after > settings.max_users:
             try:
                 client = __import__("boto3").client(
                     "cognito-idp", region_name=settings.aws_region

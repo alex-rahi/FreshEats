@@ -43,6 +43,16 @@ function statusColor(status?: string) {
   return colors.accent;
 }
 
+function notFoodMessage(recipe: Recipe) {
+  const reason = recipe.moderation_reason?.trim();
+  if (reason) {
+    if (/^not a food image/i.test(reason)) return reason;
+    return `Not a food image — ${reason}`;
+  }
+  if (recipe.what_happens) return recipe.what_happens;
+  return 'Not a food image — this photo was rejected and not published. Upload a clear dish or ingredients photo.';
+}
+
 export default function UploadScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const boxWidth = previewBoxWidth(screenWidth);
@@ -115,19 +125,24 @@ export default function UploadScreen() {
 
       if (moderated.status === 'published') {
         setStatus('Published!');
+        setError(null);
         setTitle('');
         setDescription('');
         setImageUri(null);
         router.replace('/(tabs)/grid');
       } else if (moderated.status === 'rejected') {
-        setStatus('Rejected — food only. Not published.');
+        const msg = notFoodMessage(moderated);
+        setStatus('Rejected — not published');
+        setError(msg);
       } else if (moderated.status === 'pending_review' || moderated.status === 'processing') {
+        setError(null);
         setStatus(
           moderated.status === 'processing'
-            ? 'Uploaded — YOLO moderation queued.'
+            ? 'Still processing — refresh upload shortly.'
             : 'Held for manual review — not on the grid yet.',
         );
       } else {
+        setError(null);
         setStatus(`Status: ${moderated.status}`);
       }
     } catch (e: any) {
@@ -289,5 +304,5 @@ const styles = StyleSheet.create({
   },
   buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
   status: { marginTop: 12, color: colors.success },
-  error: { marginTop: 12, color: colors.danger },
+  error: { marginTop: 12, color: colors.danger, fontSize: 15, fontWeight: '600', lineHeight: 21 },
 });
