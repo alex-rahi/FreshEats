@@ -194,28 +194,28 @@ def _evaluate_rules(detections: list[dict], moderation_scores: list[dict] | None
             "food_detection",
             "reject",
             max_u,
-            {"reason": "Food only — non-food object detected", "detected": sorted(unrelated)},
+            {"reason": "Not a food image — non-food object detected", "detected": sorted(unrelated)},
         )
     elif cookware and not food_core:
         food = _rule(
             "food_detection",
             "reject",
             0.7,
-            {"reason": "Food only — utensils/table without food is not enough", "detected": sorted(labels)},
+            {"reason": "Not a food image — utensils/table without food is not enough", "detected": sorted(labels)},
         )
     elif not labels:
         food = _rule(
             "food_detection",
             "reject",
             0.85,
-            {"reason": "Food only — no food detected in image"},
+            {"reason": "Not a food image — no food detected"},
         )
     else:
         food = _rule(
             "food_detection",
             "reject",
             0.75,
-            {"reason": "Food only — image is not clearly food", "detected": sorted(labels)},
+            {"reason": "Not a food image — photo is not clearly food", "detected": sorted(labels)},
         )
 
     # recipe_relevance
@@ -232,7 +232,7 @@ def _evaluate_rules(detections: list[dict], moderation_scores: list[dict] | None
             "reject",
             0.9,
             {
-                "reason": "Food only — FreshEats publishes recipe food photos only",
+                "reason": "Not a food image — FreshEats publishes recipe food photos only",
                 "detected": sorted(labels),
                 "policy": "food_only",
             },
@@ -283,8 +283,8 @@ def analyze_image_file(path: Path) -> dict:
 def _what_happens(decision: str) -> str:
     if decision == "reject":
         return (
-            "Rejected (food only) — this post is not published and does not appear on the grid. "
-            "Upload a clear food / recipe photo."
+            "Not a food image — this post was rejected and is not published. "
+            "Upload a clear dish or ingredients photo."
         )
     if decision in ("flag_for_review", "manual_review"):
         return (

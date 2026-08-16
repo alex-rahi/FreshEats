@@ -109,19 +109,37 @@ def create_cognito_user(email: str, password: str, username: str) -> None:
     if not pool_id:
         raise RuntimeError("Cognito user pool is not configured")
     client = boto3.client("cognito-idp", region_name=settings.aws_region)
-    client.admin_create_user(
-        UserPoolId=pool_id,
-        Username=email,
-        UserAttributes=[
-            {"Name": "email", "Value": email},
-            {"Name": "email_verified", "Value": "true"},
-            {"Name": "preferred_username", "Value": username},
-        ],
-        MessageAction="SUPPRESS",
-    )
+    try:
+        client.admin_create_user(
+            UserPoolId=pool_id,
+            Username=email,
+            UserAttributes=[
+                {"Name": "email", "Value": email},
+                {"Name": "email_verified", "Value": "true"},
+                {"Name": "preferred_username", "Value": username},
+            ],
+            MessageAction="SUPPRESS",
+        )
+    except ClientError as e:
+        if e.response.get("Error", {}).get("Code") != "UsernameExistsException":
+            raise
+        # Existing user (e.g. stuck FORCE_CHANGE_PASSWORD) — still set permanent password below.
     client.admin_set_user_password(
         UserPoolId=pool_id,
         Username=email,
         Password=password,
         Permanent=True,
     )
+
+
+def validate_password_policy(password: str) -> str | None:
+    """Return an error message if password fails Cognito pool defaults, else None."""
+    if len(password) < 8:
+        return "Password must be at least 8 characters"
+    if not any(c.isupper() for c in password):
+        return "Password must include an uppercase letter"
+    if not any(c.islower() for c in password):
+        return "Password must include a lowercase letter"
+    if not any(c.isdigit() for c in password):
+        return "Password must include a number"
+    return None

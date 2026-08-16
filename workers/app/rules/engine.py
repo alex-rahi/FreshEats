@@ -109,31 +109,34 @@ def rule_food_detection(ctx: EvaluationContext) -> RuleResult:
     if "person" in labels and not food_core:
         return RuleResult(
             "food_detection", Outcome.REJECT, confidences.get("person", 0.8),
-            {"reason": "Food only — person/portrait without food", "detected": list(labels)},
+            {"reason": "Not a food image — person/portrait without food", "detected": list(labels)},
         )
 
     if unrelated and not food_core:
         max_unrelated = max((confidences.get(l, 0) for l in unrelated), default=0)
         return RuleResult(
             "food_detection", Outcome.REJECT, max(max_unrelated, 0.7),
-            {"reason": "Food only — non-food object detected", "detected": list(unrelated)},
+            {
+                "reason": f"Not a food image — detected {', '.join(sorted(unrelated))} instead of food",
+                "detected": list(unrelated),
+            },
         )
 
     if (cookware or cooking_hits) and not food_core:
         return RuleResult(
             "food_detection", Outcome.REJECT, 0.75,
-            {"reason": "Food only — cookware/kitchen context without food", "detected": list(labels)},
+            {"reason": "Not a food image — kitchen items without food", "detected": list(labels)},
         )
 
     if not labels:
         return RuleResult(
             "food_detection", Outcome.REJECT, 0.85,
-            {"reason": "Food only — no food detected in image"},
+            {"reason": "Not a food image — no food detected"},
         )
 
     return RuleResult(
         "food_detection", Outcome.REJECT, 0.8,
-        {"reason": "Food only — image is not clearly food", "detected": list(labels)},
+        {"reason": "Not a food image — photo is not clearly food", "detected": list(labels)},
     )
 
 

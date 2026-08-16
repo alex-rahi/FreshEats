@@ -8,12 +8,12 @@
 
 Treat the sections below as the full product and infrastructure **specification / roadmap**, not a claim that every item is built, tested, or deployed.
 
-**Snapshot:** `v8.0.0` on `main`.
+**Snapshot:** `v9.0.0` on `main`.
 
 | Mode | Status |
 |------|--------|
 | **Local demo** (Stage 1) | Docker Compose + Expo; `USE_PLACEHOLDERS=true`; food-only YOLO on upload |
-| **Live AWS beta** (Stage 2–style) | API + YOLO worker on **EKS** (`fresheats` namespace); Cognito auth; S3 / SQS / RDS / Redis; signup capped at **`MAX_USERS=5`** |
+| **Live AWS beta** (Stage 2–style) | API + YOLO worker on **EKS** (`fresheats` namespace); Cognito auth; S3 / SQS / RDS / Redis; signup capped at **`MAX_USERS=5`**; web via CloudFront |
 
 ### What the demo focuses on
 
@@ -24,18 +24,22 @@ The main feature for demo purposes is:
 - Uploaded recipe photos are checked before publish
 - Clear food / dish content can publish
 - Non-food images (people, devices, blank frames, unrelated objects, etc.) are rejected
+- Rejected uploads show a clear **“Not a food image — …”** error (reason from YOLO + upload UI)
+- On AWS, the client waits for SQS/worker moderation to finish before showing publish vs reject
 - Rule outcomes are shown in the upload and recipe UI
 
 ### Live beta (what is running on AWS)
 
 - EKS deployments: `fresheats-api`, `fresheats-worker` (images in ECR)
 - Auth: Cognito user pool + app client; Sign up / Log in in the Expo UI
+- Password policy: **8+ characters**, upper, lower, and a number (API + signup hint)
 - Hard cap: **5 total user creations** (`MAX_USERS`, `/api/v1/auth/register` + signup screen)
-- Platform: RDS Postgres, S3, SQS moderation queue, ElastiCache Redis, CloudFront
+- Web app: Expo static export on S3 + CloudFront (`https://d1reqap9sj9n0b.cloudfront.net`), API proxied over HTTPS
+- Platform: RDS Postgres, S3, SQS moderation queue, ElastiCache Redis, CloudFront (media CDN)
 - Observability: CloudWatch dashboards `fresheats-platform` and `fresheats-cost-guardrails`
 - Cost guardrails: AWS Budgets → SNS → cutoff Lambda (progressive scale / shutoff)
 
-Mobile points at the API LoadBalancer + Cognito when not in placeholder mode. See [docs/AWS.md](docs/AWS.md).
+Point the mobile/web client at the CloudFront origin + Cognito when not in placeholder mode. See [docs/AWS.md](docs/AWS.md).
 
 Other capabilities in this README (grocery lists, retailer prices, invitation codes, Helm/GitHub Actions cutover, live ads, etc.) remain planned or partial unless marked implemented elsewhere.
 

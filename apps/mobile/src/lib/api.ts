@@ -222,7 +222,7 @@ class ApiClient {
 
   /**
    * Demo/local: multipart + sync YOLO.
-   * AWS: create → PUT presigned → confirm-upload (SQS).
+   * AWS: create → PUT presigned → confirm-upload (SQS) → poll until settled.
    */
   publishRecipe = async (title: string, description: string | undefined, imageUri: string) => {
     const created = await this.createRecipe(title, description);
@@ -231,12 +231,24 @@ class ApiClient {
       const { recipe, upload_url } = created;
       if (!upload_url) throw new Error('Missing presigned upload URL');
       await this.uploadToPresignedUrl(upload_url, imageUri);
-      return this.confirmUpload(recipe.id);
+      await this.confirmUpload(recipe.id);
+      return this.waitForModeration(recipe.id);
     }
 
     const recipe = created as Recipe;
     await this.uploadRecipeImage(recipe.id, imageUri);
     return this.runModeration(recipe.id);
+  };
+
+  waitForModeration = async (recipeId: string, attempts = 40, delayMs = 1500) => {
+    for (let i = 0; i < attempts; i++) {
+      const recipe = await this.getRecipe(recipeId);
+      if (['published', 'rejected', 'pending_review', 'approved'].includes(recipe.status)) {
+        return recipe;
+      }
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+    return this.getRecipe(recipeId);
   };
 
   runModeration = (recipeId: string) =>
