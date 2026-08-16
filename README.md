@@ -2,6 +2,8 @@
 
 # Build FreshEats: End-to-End Social Recipe and Grocery Platform
 
+**Beta is live:** [https://d1reqap9sj9n0b.cloudfront.net](https://d1reqap9sj9n0b.cloudfront.net)
+
 ## Current status (read this first)
 
 **Not all features in this document are implemented.**
