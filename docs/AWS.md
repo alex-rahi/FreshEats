@@ -42,10 +42,23 @@ Admin (Next.js on EKS) ──X-Admin-Secret──▶ FastAPI
 | Auth | Amazon Cognito (JWT) |
 | API | FastAPI, Uvicorn, Pydantic, boto3 |
 | Moderation | YOLOv8 (Ultralytics), OpenCV, SQS worker |
+| Rules | Business rules engine (`workers/app/rules/engine.py`) |
 | Data | RDS PostgreSQL, ElastiCache Redis |
 | Storage / CDN | S3, CloudFront (web + media) |
 | Compute | EKS (`fresheats-api`, `fresheats-worker`), ALB, ECR |
 | IaC / ops | Terraform, CloudWatch, AWS Budgets → SNS → cutoff Lambda |
+
+## Business rules engine
+
+Worker path: YOLO detections → `evaluate_all_rules()` → recipe status.
+
+| Rule | Purpose | On fail |
+|------|---------|---------|
+| `content_moderation` | Safety categories | Reject (≥0.9) or flag (≥0.5) |
+| `food_detection` | Food-only policy | Reject — **“Not a food image — …”** |
+| `user_trust` | Low-trust accounts | Flag for review |
+
+Strictest outcome wins. See `workers/app/rules/engine.py` and `workers/app/rules/outcomes.py`.
 
 ## Components
 

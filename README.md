@@ -26,11 +26,24 @@ Uploaded photos are moderated before publish:
 | Auth | Amazon Cognito (JWT) |
 | API | FastAPI, Uvicorn, Pydantic, boto3 |
 | Moderation | YOLOv8 (Ultralytics), OpenCV, SQS worker |
+| Rules | Business rules engine (`workers/app/rules/engine.py`) |
 | Data | RDS PostgreSQL, ElastiCache Redis |
 | Storage / CDN | S3, CloudFront (web + media) |
 | Compute | EKS (`fresheats-api`, `fresheats-worker`), ALB, ECR |
 | IaC / ops | Terraform, CloudWatch, AWS Budgets → SNS → cutoff Lambda |
 | Local demo | Docker Compose (optional) |
+
+## Business rules engine
+
+After YOLO detection, the worker evaluates rules and takes the **strictest** outcome (`reject` > `manual_review` / `flag_for_review` > `approve` → `publish`).
+
+| Rule | Purpose | On fail |
+|------|---------|---------|
+| `content_moderation` | Safety categories (explicit, violence, etc.) | Reject (≥0.9) or flag for review (≥0.5) |
+| `food_detection` | **Food-only** — require edible/plated food labels | Reject with **“Not a food image — …”** |
+| `user_trust` | Low-trust accounts | Flag for review |
+
+`food_detection` rejects portraits without food, unrelated objects (phone, car, laptop, …), kitchen items alone, empty detections, or ambiguous non-food scenes. Outcomes map to recipe status: `published` · `rejected` · `pending_review`.
 
 ## Architecture
 

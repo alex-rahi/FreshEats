@@ -27,11 +27,24 @@ For what is live today, start at the [repository homepage README](../README.md) 
 | Auth | Amazon Cognito (JWT) |
 | API | FastAPI, Uvicorn, Pydantic, boto3 |
 | Moderation | YOLOv8 (Ultralytics), OpenCV, SQS worker |
+| Rules | Business rules engine (`workers/app/rules/engine.py`) |
 | Data | RDS PostgreSQL, ElastiCache Redis |
 | Storage / CDN | S3, CloudFront (web + media) |
 | Compute | EKS (`fresheats-api`, `fresheats-worker`), ALB, ECR |
 | IaC / ops | Terraform, CloudWatch, AWS Budgets → SNS → cutoff Lambda |
 | Local demo | Docker Compose (optional) |
+
+### Business rules engine
+
+YOLO labels feed `evaluate_all_rules()` in `workers/app/rules/engine.py`. The engine returns the **strictest** outcome among:
+
+| Rule | Purpose | On fail |
+|------|---------|---------|
+| `content_moderation` | Safety categories | Reject (≥0.9) or flag (≥0.5) |
+| `food_detection` | Food-only policy | Reject — **“Not a food image — …”** |
+| `user_trust` | Low-trust accounts | Flag for review |
+
+Status mapping: `publish`/`approve` → `published` · `reject` → `rejected` · `flag_for_review`/`manual_review` → `pending_review`. Local demo mirrors the same policy in `backend/app/services/demo_moderation.py`.
 
 ### Architecture diagram (live beta)
 
