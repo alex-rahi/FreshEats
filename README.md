@@ -1,60 +1,110 @@
 ![FreshEats demo — responsive recipe image grid](screenshots/fresheats-grid.png)
 
-# FreshEats
+# FreshEats — live AWS beta
 
-## Intro (live beta)
+Architecture as deployed: EKS API + YOLO worker, Cognito, S3/SQS/RDS/Redis, dual CloudFront.
 
-**Beta is live:** [https://d1reqap9sj9n0b.cloudfront.net](https://d1reqap9sj9n0b.cloudfront.net)
+**Live** · `v9.0.0` · `MAX_USERS=5` · [d1reqap9sj9n0b.cloudfront.net](https://d1reqap9sj9n0b.cloudfront.net)
 
-No local Docker / Compose build is required — open the link above.
+### No local Docker required
 
-Social recipe app with **food-only YOLO moderation** on upload. Snapshot `v9.0.0` on `main`; signup capped at **5 users**.
+Open the CloudFront URL above. Local Compose is only for Stage 1 development.
 
-- Food / dish photos can publish to the grid
-- Non-food images are rejected with a clear **“Not a food image — …”** error
-- On AWS, the client waits for SQS → YOLO before showing publish or reject
-- Ops: [docs/AWS.md](docs/AWS.md) · Infra: [infrastructure/README.md](infrastructure/README.md)
-
-## Architecture
+## Request & moderation flow
 
 ```mermaid
-flowchart LR
-  User[User / browser] --> CFWeb[CloudFront web]
-  User --> Cognito[Cognito]
-  CFWeb -->|"/api /health /media"| ALB[ALB]
-  ALB --> API[FastAPI on EKS]
-  Cognito -->|JWT| API
-  API --> RDS[(RDS Postgres)]
-  API --> Redis[(Redis)]
-  API --> S3[(S3 uploads)]
-  API --> SQS[SQS moderation]
-  SQS --> Worker[YOLO worker on EKS]
+flowchart TB
+  User[User / browser]
+  Cognito[Cognito]
+  CFWeb[CloudFront web + API]
+  ALB[ALB → EKS]
+  API[FastAPI API]
+  Redis[ElastiCache Redis]
+  SQS[SQS moderation]
+  Worker[YOLO worker]
+  RDS[RDS Postgres]
+  S3[S3 uploads / images]
+  CW[CloudWatch + Budgets]
+  CFMedia[CloudFront media]
+
+  User --> CFWeb
+  User --> Cognito
+  CFWeb --> ALB
+  ALB --> API
+  Cognito --> API
+  API --> RDS
+  API --> Redis
+  API --> S3
+  API --> SQS
+  API --> CW
+  SQS --> Worker
   Worker --> RDS
   Worker --> S3
-  S3 --> CFMedia[CloudFront media]
-  CFMedia --> User
+  Worker --> CW
+  S3 --> CFMedia
 ```
 
-Upload gate: create recipe → presigned S3 PUT → confirm-upload → SQS → YOLO rules → publish or **Not a food image** reject.
+Accent outline: EKS workloads (API + YOLO). Published images serve from CloudFront media CDN back to the browser.
+
+| | |
+|--:|:--|
+| **2** | EKS deployments |
+| **5** | Signup cap |
+| **YOLO** | Food-only gate |
+| **HTTPS** | CloudFront edge |
 
 ## Tech stack
 
 | Layer | Stack |
 |-------|--------|
-| Client | Expo / React Native / React Native Web, Expo Router, TypeScript |
+| Client | Expo / React Native / RN Web, Expo Router, TypeScript |
 | Auth | Amazon Cognito (JWT) |
 | API | FastAPI, Uvicorn, Pydantic, boto3 |
 | Moderation | YOLOv8 (Ultralytics), OpenCV, SQS worker |
-| Rules | Business rules engine (`workers/app/rules/engine.py`) — `content_moderation`, `food_detection`, `user_trust` |
 | Data | RDS PostgreSQL, ElastiCache Redis |
 | Storage / CDN | S3, CloudFront (web + media) |
-| Compute | EKS (`fresheats-api`, `fresheats-worker`), ALB, ECR |
-| IaC / ops | Terraform, CloudWatch, AWS Budgets → SNS → cutoff Lambda |
-| Local demo | Docker Compose (optional) |
+| Compute | EKS, ALB, ECR |
+| IaC / ops | Terraform, CloudWatch, Budgets → SNS → Lambda |
+| Local demo | Docker Compose (optional; not required for beta) |
+
+## Upload → food-only gate
+
+| Step | Component | What happens |
+|------|-----------|--------------|
+| 1 | Expo web (CloudFront) | User picks photo + title |
+| 2 | Cognito | JWT on API calls |
+| 3 | FastAPI | Create recipe + presigned S3 PUT |
+| 4 | S3 | Raw image lands in quarantine |
+| 5 | SQS | confirm-upload enqueues moderation |
+| 6 | YOLO worker | Food-only rules; reject → Not a food image |
+| 7 | RDS | Status published / rejected / pending_review |
+| 8 | Client poll | UI shows publish or red reject error |
+
+## AWS services in this beta
+
+| Layer | Service | Notes |
+|-------|---------|-------|
+| Edge | CloudFront + S3 | Static web; API/health/media proxied to ALB |
+| Auth | Cognito | Self-signup; password policy; MAX_USERS=5 |
+| Compute | EKS | fresheats-api + fresheats-worker |
+| Data | RDS Postgres | Recipe + moderation state |
+| Cache | ElastiCache Redis | App cache |
+| Queue | SQS + DLQ | Moderation jobs |
+| Media | S3 + CloudFront | Uploads + published images |
+| Ops | CloudWatch + Budgets | fresheats-platform, cost cutoff Lambda |
+| IaC | Terraform | infrastructure/terraform/environments/prod |
+
+## Key URLs / IDs
+
+Web: [https://d1reqap9sj9n0b.cloudfront.net](https://d1reqap9sj9n0b.cloudfront.net)
+
+Namespace: `fresheats` · Worker image tag example: `notfood-f6a09e8`
+
+Source of truth for ops detail: [docs/AWS.md](docs/AWS.md). Diagram reflects the live beta path (not the full roadmap below).
 
 ---
 
-## Everything else
+## Everything else in the doc
 
 **Not all features below are implemented.** Treat this as the product and infrastructure **specification / roadmap**, not a claim that every item is built or deployed.
 
