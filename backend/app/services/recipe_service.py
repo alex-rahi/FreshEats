@@ -39,6 +39,17 @@ async def ensure_profile(cognito_sub: str, email: str | None = None, username: s
         row = await conn.fetchrow("SELECT * FROM profiles WHERE cognito_sub = $1", cognito_sub)
         if row:
             return _profile_from_row(row)
+        from fastapi import HTTPException, status
+
+        from app.config import settings
+        from app.services import signup_capacity
+
+        capacity = await signup_capacity.signup_status()
+        if not capacity["open"]:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                detail=f"Private beta is full ({settings.max_users} users max).",
+            )
         uname = username or (email.split("@")[0] if email else f"cook_{cognito_sub[:8]}")
         row = await conn.fetchrow(
             """

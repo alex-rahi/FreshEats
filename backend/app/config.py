@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     cognito_client_id: str = ""
     cognito_issuer: str = ""
     aws_region: str = "us-east-1"
+    max_users: int = 5  # hard cap on total user creations (private beta)
 
     # Data
     database_url: str = "postgresql://postgres:postgres@localhost:54322/postgres"

@@ -71,8 +71,9 @@ export default function LoginScreen() {
         <Text style={styles.footer}>
           New here?{' '}
           <Link href="/(auth)/signup" style={styles.link}>
-            Sign up
+            Create account
           </Link>
+          {' '}(5-user private beta)
         </Text>
       </View>
     </KeyboardAvoidingView>

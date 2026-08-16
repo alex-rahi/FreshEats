@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api import admin, moderation, profiles, recipes, social
+from app.api import admin, auth, moderation, profiles, recipes, social
 from app.config import settings
 from app.db.pool import close_pool, get_pool
 from app.middleware.errors import register_exception_handlers
@@ -43,6 +43,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router, prefix="/api/v1")
 app.include_router(profiles.router, prefix="/api/v1")
 app.include_router(recipes.router, prefix="/api/v1")
 app.include_router(social.router, prefix="/api/v1")

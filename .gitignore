@@ -43,6 +43,7 @@ workers/models/*.onnx
 
 # Uploads
 data/uploads/*
+data/signup_ledger.json
 !data/uploads/.gitkeep
 
 # Terraform

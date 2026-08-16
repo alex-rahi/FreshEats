@@ -140,6 +140,25 @@ class ApiClient {
       worker?: { status?: string; model_ready?: boolean; error?: string } | null;
     }>('/moderation/health');
 
+  getSignupStatus = () =>
+    this.request<{ limit: number; count: number; remaining: number; open: boolean }>(
+      '/auth/signup-status',
+    );
+
+  register = (email: string, password: string, username: string) =>
+    this.request<{
+      ok: boolean;
+      mode: 'demo' | 'cognito';
+      email: string;
+      limit: number;
+      count: number;
+      remaining: number;
+      open: boolean;
+    }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, username }),
+    });
+
   getRecipe = (id: string) => this.request<Recipe>(`/recipes/${id}`);
 
   getUserRecipes = (userId: string) => this.request<Recipe[]>(`/recipes/user/${userId}`);

@@ -6,7 +6,6 @@ import { api } from '../lib/api';
 import {
   cognitoSignIn,
   cognitoSignOut,
-  cognitoSignUp,
   getCognitoSession,
   isCognitoMode,
 } from '../lib/cognito';
@@ -72,7 +71,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading,
       refreshProfile,
       signUp: async (email, password, username) => {
-        if (isDemoMode() || isLocalYoloMode()) {
+        const result = await api.register(email, password, username);
+        if (isDemoMode() || isLocalYoloMode() || result.mode === 'demo') {
           const demoUser = { id: PLACEHOLDER_USER_ID, email };
           await AsyncStorage.setItem(DEMO_KEY, JSON.stringify(demoUser));
           setUser(demoUser);
@@ -83,7 +83,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!isCognitoMode()) {
           throw new Error('Cognito is not configured. Set EXPO_PUBLIC_COGNITO_* env vars.');
         }
-        await cognitoSignUp(email, password, username);
         const session = await cognitoSignIn(email, password);
         setUser({ id: session.sub, email: session.email });
         await api.updateProfile({ username, display_name: username });
