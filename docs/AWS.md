@@ -1,5 +1,7 @@
 # FreshEats on AWS (EKS + full AWS)
 
+Ops guide for the **live beta**. Product/roadmap spec: [README.md](README.md). Homepage summary: [../README.md](../README.md).
+
 ## Architecture
 
 ```
