@@ -6,7 +6,14 @@
 
 **Not all features in this document are implemented.**
 
-FreshEats is running in **demo mode** for **Stage 1: private development** only. Treat the sections below as the full product and infrastructure **specification / roadmap**, not a claim that every item is built, tested, or deployed.
+Treat the sections below as the full product and infrastructure **specification / roadmap**, not a claim that every item is built, tested, or deployed.
+
+**Snapshot:** `v8.0.0` on `main`.
+
+| Mode | Status |
+|------|--------|
+| **Local demo** (Stage 1) | Docker Compose + Expo; `USE_PLACEHOLDERS=true`; food-only YOLO on upload |
+| **Live AWS beta** (Stage 2–style) | API + YOLO worker on **EKS** (`fresheats` namespace); Cognito auth; S3 / SQS / RDS / Redis; signup capped at **`MAX_USERS=5`** |
 
 ### What the demo focuses on
 
@@ -19,7 +26,18 @@ The main feature for demo purposes is:
 - Non-food images (people, devices, blank frames, unrelated objects, etc.) are rejected
 - Rule outcomes are shown in the upload and recipe UI
 
-Other capabilities in this README (grocery lists, retailer prices, invitation beta, full EKS production path, advertising, etc.) are planned or partial unless explicitly marked implemented elsewhere.
+### Live beta (what is running on AWS)
+
+- EKS deployments: `fresheats-api`, `fresheats-worker` (images in ECR)
+- Auth: Cognito user pool + app client; Sign up / Log in in the Expo UI
+- Hard cap: **5 total user creations** (`MAX_USERS`, `/api/v1/auth/register` + signup screen)
+- Platform: RDS Postgres, S3, SQS moderation queue, ElastiCache Redis, CloudFront
+- Observability: CloudWatch dashboards `fresheats-platform` and `fresheats-cost-guardrails`
+- Cost guardrails: AWS Budgets → SNS → cutoff Lambda (progressive scale / shutoff)
+
+Mobile points at the API LoadBalancer + Cognito when not in placeholder mode. See [docs/AWS.md](docs/AWS.md).
+
+Other capabilities in this README (grocery lists, retailer prices, invitation codes, Helm/GitHub Actions cutover, live ads, etc.) remain planned or partial unless marked implemented elsewhere.
 
 ---
 
@@ -62,11 +80,10 @@ Build the application incrementally. Do not attempt to implement the large-scale
 
 ### Stage 2: Invitation-only interview beta
 
-- Host FreshEats for 5–10 trusted testers
-- Require administrator-generated invitation codes
-- Set a configurable maximum of 10 active beta users
+- Host FreshEats for a small trusted tester set
+- **Implemented now:** Cognito signup with a hard **`MAX_USERS=5`** cap (UI + API), EKS API/worker, CloudWatch dashboards
+- **Still roadmap:** administrator-generated invitation codes, upload kill switches, waitlist UX polish
 - Limit image uploads
-- Provide administrator registration and upload kill switches
 - Use placeholder ads without a live advertising network
 - Collect operational metrics without collecting unnecessary personal data
 - Demonstrate the complete application and infrastructure during interviews
@@ -268,11 +285,13 @@ Use normalized relational tables with appropriate indexes, foreign keys, uniquen
 
 Administrator controls for registration mode, invitation codes, maximum active users, per-user recipe/image quotas, max image size, kill switches (uploads, comments, prices, ads), maintenance mode, suspend users, and revoke sessions.
 
-**Default beta settings:**
+**Live beta (implemented):** self-serve Cognito signup gated by `MAX_USERS=5` (`GET/POST /api/v1/auth/signup-status` + `/auth/register`). Invitation codes and admin kill switches remain roadmap.
+
+**Default beta settings (target design):**
 
 ```text
-registration_mode=invite_only
-maximum_active_users=10
+registration_mode=invite_only   # live beta currently uses open Cognito signup + MAX_USERS
+maximum_active_users=5
 recipes_per_user=20
 images_per_recipe=5
 maximum_image_size_mb=10
