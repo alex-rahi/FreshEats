@@ -19,6 +19,42 @@ For what is live today, start at the [repository homepage README](../README.md) 
 - Platform: RDS, S3, SQS, Redis, dual CloudFront; CloudWatch `fresheats-platform` + cost guardrails
 - Ops detail: [AWS.md](AWS.md)
 
+### Tech stack (live beta)
+
+| Layer | Stack |
+|-------|--------|
+| Client | Expo / React Native / React Native Web, Expo Router, TypeScript |
+| Auth | Amazon Cognito (JWT) |
+| API | FastAPI, Uvicorn, Pydantic, boto3 |
+| Moderation | YOLOv8 (Ultralytics), OpenCV, SQS worker |
+| Data | RDS PostgreSQL, ElastiCache Redis |
+| Storage / CDN | S3, CloudFront (web + media) |
+| Compute | EKS (`fresheats-api`, `fresheats-worker`), ALB, ECR |
+| IaC / ops | Terraform, CloudWatch, AWS Budgets → SNS → cutoff Lambda |
+| Local demo | Docker Compose (optional) |
+
+### Architecture diagram (live beta)
+
+```mermaid
+flowchart LR
+  User[User / browser] --> CFWeb[CloudFront web]
+  User --> Cognito[Cognito]
+  CFWeb -->|"/api /health /media"| ALB[ALB]
+  ALB --> API[FastAPI on EKS]
+  Cognito -->|JWT| API
+  API --> RDS[(RDS Postgres)]
+  API --> Redis[(Redis)]
+  API --> S3[(S3 uploads)]
+  API --> SQS[SQS moderation]
+  SQS --> Worker[YOLO worker on EKS]
+  Worker --> RDS
+  Worker --> S3
+  S3 --> CFMedia[CloudFront media]
+  CFMedia --> User
+```
+
+Upload gate: create recipe → presigned S3 PUT → confirm-upload → SQS → YOLO → publish or **Not a food image** reject.
+
 ---
 
 Build a production-style full-stack application named **FreshEats**. FreshEats is a social recipe and grocery-shopping platform where users share recipes, enter structured ingredients, identify where ingredients can be purchased, compare brands and user-submitted prices, create shopping lists, and interact through likes, saves, comments, follows, and reviews.

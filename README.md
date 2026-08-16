@@ -32,6 +32,30 @@ Uploaded photos are moderated before publish:
 | IaC / ops | Terraform, CloudWatch, AWS Budgets → SNS → cutoff Lambda |
 | Local demo | Docker Compose (optional) |
 
+## Architecture
+
+Live AWS beta (request + food-only moderation path):
+
+```mermaid
+flowchart LR
+  User[User / browser] --> CFWeb[CloudFront web]
+  User --> Cognito[Cognito]
+  CFWeb -->|"/api /health /media"| ALB[ALB]
+  ALB --> API[FastAPI on EKS]
+  Cognito -->|JWT| API
+  API --> RDS[(RDS Postgres)]
+  API --> Redis[(Redis)]
+  API --> S3[(S3 uploads)]
+  API --> SQS[SQS moderation]
+  SQS --> Worker[YOLO worker on EKS]
+  Worker --> RDS
+  Worker --> S3
+  S3 --> CFMedia[CloudFront media]
+  CFMedia --> User
+```
+
+Upload gate: create recipe → presigned S3 PUT → confirm-upload → SQS → YOLO → publish or **Not a food image** reject.
+
 ## Docs
 
 | Doc | What it’s for |

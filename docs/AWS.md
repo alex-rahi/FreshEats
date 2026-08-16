@@ -4,15 +4,48 @@ Ops guide for the **live beta**. Product/roadmap spec: [README.md](README.md). H
 
 ## Architecture
 
+Live beta path (CloudFront web proxies API to the ALB):
+
+```mermaid
+flowchart LR
+  User[User / browser] --> CFWeb[CloudFront web]
+  User --> Cognito[Cognito]
+  CFWeb -->|"/api /health /media"| ALB[ALB]
+  ALB --> API[FastAPI on EKS]
+  Cognito -->|JWT| API
+  API --> RDS[(RDS Postgres)]
+  API --> Redis[(Redis)]
+  API --> S3[(S3 uploads)]
+  API --> SQS[SQS moderation]
+  SQS --> Worker[YOLO worker on EKS]
+  Worker --> RDS
+  Worker --> S3
+  S3 --> CFMedia[CloudFront media]
+  CFMedia --> User
 ```
-Expo app ──Cognito JWT──▶ ALB / Ingress ──▶ FastAPI (EKS)
-                                              ├─ RDS PostgreSQL
-                                              ├─ S3 (presigned PUT)
-                                              └─ SQS moderation queue
-                                                   └─ YOLO worker (EKS)
-CloudFront ──▶ S3 recipe-images
+
+```
+Expo / RN Web ──Cognito JWT──▶ CloudFront ──▶ ALB ──▶ FastAPI (EKS)
+                                                      ├─ RDS PostgreSQL
+                                                      ├─ Redis
+                                                      ├─ S3 (presigned PUT)
+                                                      └─ SQS ──▶ YOLO worker (EKS)
+CloudFront (media) ──▶ S3 recipe-images
 Admin (Next.js on EKS) ──X-Admin-Secret──▶ FastAPI
 ```
+
+## Tech stack
+
+| Layer | Stack |
+|-------|--------|
+| Client | Expo / React Native / React Native Web, Expo Router, TypeScript |
+| Auth | Amazon Cognito (JWT) |
+| API | FastAPI, Uvicorn, Pydantic, boto3 |
+| Moderation | YOLOv8 (Ultralytics), OpenCV, SQS worker |
+| Data | RDS PostgreSQL, ElastiCache Redis |
+| Storage / CDN | S3, CloudFront (web + media) |
+| Compute | EKS (`fresheats-api`, `fresheats-worker`), ALB, ECR |
+| IaC / ops | Terraform, CloudWatch, AWS Budgets → SNS → cutoff Lambda |
 
 ## Components
 
