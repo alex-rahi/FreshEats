@@ -1,51 +1,62 @@
 ![FreshEats demo — responsive recipe image grid](screenshots/fresheats-grid.png)
 
-# Build FreshEats: End-to-End Social Recipe and Grocery Platform
+# FreshEats
+
+## Intro (live beta)
 
 **Beta is live:** [https://d1reqap9sj9n0b.cloudfront.net](https://d1reqap9sj9n0b.cloudfront.net)
 
-## Current status (read this first)
+No local Docker / Compose build is required — open the link above.
 
-**Not all features in this document are implemented.**
+Social recipe app with **food-only YOLO moderation** on upload. Snapshot `v9.0.0` on `main`; signup capped at **5 users**.
 
-Treat the sections below as the full product and infrastructure **specification / roadmap**, not a claim that every item is built, tested, or deployed.
+- Food / dish photos can publish to the grid
+- Non-food images are rejected with a clear **“Not a food image — …”** error
+- On AWS, the client waits for SQS → YOLO before showing publish or reject
+- Ops: [docs/AWS.md](docs/AWS.md) · Infra: [infrastructure/README.md](infrastructure/README.md)
 
-**Snapshot:** `v9.0.0` on `main`.
+## Architecture
 
-| Mode | Status |
-|------|--------|
-| **Local demo** (Stage 1) | Docker Compose + Expo; `USE_PLACEHOLDERS=true`; food-only YOLO on upload |
-| **Live AWS beta** (Stage 2–style) | API + YOLO worker on **EKS** (`fresheats` namespace); Cognito auth; S3 / SQS / RDS / Redis; signup capped at **`MAX_USERS=5`**; web via CloudFront |
+```mermaid
+flowchart LR
+  User[User / browser] --> CFWeb[CloudFront web]
+  User --> Cognito[Cognito]
+  CFWeb -->|"/api /health /media"| ALB[ALB]
+  ALB --> API[FastAPI on EKS]
+  Cognito -->|JWT| API
+  API --> RDS[(RDS Postgres)]
+  API --> Redis[(Redis)]
+  API --> S3[(S3 uploads)]
+  API --> SQS[SQS moderation]
+  SQS --> Worker[YOLO worker on EKS]
+  Worker --> RDS
+  Worker --> S3
+  S3 --> CFMedia[CloudFront media]
+  CFMedia --> User
+```
 
-### What the demo focuses on
+Upload gate: create recipe → presigned S3 PUT → confirm-upload → SQS → YOLO rules → publish or **Not a food image** reject.
 
-The main feature for demo purposes is:
+## Tech stack
 
-**YOLO moderation — food content only**
-
-- Uploaded recipe photos are checked before publish
-- Clear food / dish content can publish
-- Non-food images (people, devices, blank frames, unrelated objects, etc.) are rejected
-- Rejected uploads show a clear **“Not a food image — …”** error (reason from YOLO + upload UI)
-- On AWS, the client waits for SQS/worker moderation to finish before showing publish vs reject
-- Rule outcomes are shown in the upload and recipe UI
-
-### Live beta (what is running on AWS)
-
-- EKS deployments: `fresheats-api`, `fresheats-worker` (images in ECR)
-- Auth: Cognito user pool + app client; Sign up / Log in in the Expo UI
-- Password policy: **8+ characters**, upper, lower, and a number (API + signup hint)
-- Hard cap: **5 total user creations** (`MAX_USERS`, `/api/v1/auth/register` + signup screen)
-- Web app: Expo static export on S3 + CloudFront (`https://d1reqap9sj9n0b.cloudfront.net`), API proxied over HTTPS
-- Platform: RDS Postgres, S3, SQS moderation queue, ElastiCache Redis, CloudFront (media CDN)
-- Observability: CloudWatch dashboards `fresheats-platform` and `fresheats-cost-guardrails`
-- Cost guardrails: AWS Budgets → SNS → cutoff Lambda (progressive scale / shutoff)
-
-Point the mobile/web client at the CloudFront origin + Cognito when not in placeholder mode. See [docs/AWS.md](docs/AWS.md).
-
-Other capabilities in this README (grocery lists, retailer prices, invitation codes, Helm/GitHub Actions cutover, live ads, etc.) remain planned or partial unless marked implemented elsewhere.
+| Layer | Stack |
+|-------|--------|
+| Client | Expo / React Native / React Native Web, Expo Router, TypeScript |
+| Auth | Amazon Cognito (JWT) |
+| API | FastAPI, Uvicorn, Pydantic, boto3 |
+| Moderation | YOLOv8 (Ultralytics), OpenCV, SQS worker |
+| Rules | Business rules engine (`workers/app/rules/engine.py`) — `content_moderation`, `food_detection`, `user_trust` |
+| Data | RDS PostgreSQL, ElastiCache Redis |
+| Storage / CDN | S3, CloudFront (web + media) |
+| Compute | EKS (`fresheats-api`, `fresheats-worker`), ALB, ECR |
+| IaC / ops | Terraform, CloudWatch, AWS Budgets → SNS → cutoff Lambda |
+| Local demo | Docker Compose (optional) |
 
 ---
+
+## Everything else
+
+**Not all features below are implemented.** Treat this as the product and infrastructure **specification / roadmap**, not a claim that every item is built or deployed.
 
 Build a production-style full-stack application named **FreshEats**. FreshEats is a social recipe and grocery-shopping platform where users share recipes, enter structured ingredients, identify where ingredients can be purchased, compare brands and user-submitted prices, create shopping lists, and interact through likes, saves, comments, follows, and reviews.
 
