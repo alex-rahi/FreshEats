@@ -1,14 +1,16 @@
 ![FreshEats demo — responsive recipe image grid](screenshots/fresheats-grid.png)
 
-# FreshEats — live AWS beta
+# FreshEats — AWS beta
 
 Architecture as deployed: EKS API + YOLO worker, Cognito, S3/SQS/RDS/Redis, dual CloudFront.
 
-**Live** · `v9.0.0` · `MAX_USERS=5` · [d1reqap9sj9n0b.cloudfront.net](https://d1reqap9sj9n0b.cloudfront.net)
+**AWS resources are currently torn down.** Glad to re-provision the full stack for interview / demo purposes (`docs/AWS.md`). Snapshot `v9.0.0` · signup cap **5 users**.
 
-### No local Docker required
+Previous demo host (when live): [d1reqap9sj9n0b.cloudfront.net](https://d1reqap9sj9n0b.cloudfront.net)
 
-Open the CloudFront URL above. Local Compose is only for Stage 1 development.
+### No local Docker required for the cloud path
+
+When re-provisioned, open the CloudFront URL from deploy outputs. Local Compose is only for Stage 1 development.
 
 ## Request & moderation flow
 
@@ -96,11 +98,11 @@ Accent outline: EKS workloads (API + YOLO). Published images serve from CloudFro
 
 ## Key URLs / IDs
 
-Web: [https://d1reqap9sj9n0b.cloudfront.net](https://d1reqap9sj9n0b.cloudfront.net)
+Web (when re-provisioned): CloudFront from Terraform/console outputs — previous demo: [https://d1reqap9sj9n0b.cloudfront.net](https://d1reqap9sj9n0b.cloudfront.net)
 
 Namespace: `fresheats` · Worker image tag example: `notfood-f6a09e8`
 
-Source of truth for ops detail: [docs/AWS.md](docs/AWS.md). Diagram reflects the live beta path (not the full roadmap below).
+Source of truth for ops detail: [docs/AWS.md](docs/AWS.md). Diagram reflects the AWS demo path (not the full roadmap below).
 
 ---
 
