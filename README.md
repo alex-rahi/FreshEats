@@ -13,6 +13,7 @@ Architecture as deployed: EKS API + YOLO worker, Cognito, S3/SQS/RDS/Redis, dual
   For interview purposes we can reference the GymTok application. 
 
 
+
 Previous demo host (when live): [d1reqap9sj9n0b.cloudfront.net](https://d1reqap9sj9n0b.cloudfront.net)
 
 ### No local Docker required for the cloud path
