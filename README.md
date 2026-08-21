@@ -10,8 +10,7 @@ Architecture as deployed: EKS API + YOLO worker, Cognito, S3/SQS/RDS/Redis, dual
   However, dependency mismatches between the application build and the AWS environment prevented a stable deployment. 
   A better approach may be to refactor the deployment and implement autoscaling when preparing the application for production.
 
-  For interview purposes we can reference the GymTok application. 
-
+  For interview purposes we can reference the [GymTok](https://github.com/alex-rahi/GymTok) application. 
 
 
 Previous demo host (when live): [d1reqap9sj9n0b.cloudfront.net](https://d1reqap9sj9n0b.cloudfront.net)
